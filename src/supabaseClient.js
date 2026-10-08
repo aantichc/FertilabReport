@@ -33,6 +33,10 @@ function encode(value) {
   return encodeURIComponent(value);
 }
 
+function isMissingTableError(error, tableName) {
+  return String(error?.message ?? "").includes(`'public.${tableName}'`);
+}
+
 export const supabaseClient = {
   async listReports() {
     return request("reports?select=*,report_history(*)&order=updated_at.desc&report_history.order=created_at.asc");
@@ -111,7 +115,12 @@ export const supabaseClient = {
   },
 
   async listPreventiveTasks() {
-    return request("preventive_tasks?select=*&order=start_date.asc,created_at.asc");
+    try {
+      return await request("preventive_tasks?select=*&order=start_date.asc,created_at.asc");
+    } catch (error) {
+      if (isMissingTableError(error, "preventive_tasks")) return [];
+      throw error;
+    }
   },
 
   async createCalendarNote(note) {
