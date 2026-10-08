@@ -1,4 +1,4 @@
-import { HistoryEntryType, StatusMeta, statuses } from "./models.js";
+import { CategoryMeta, HistoryEntryType, ReportCategory, StatusMeta, categories, statuses } from "./models.js";
 import { recipientService } from "./recipientService.js";
 import { reportService } from "./reportService.js";
 import { storage } from "./storage.js";
@@ -106,6 +106,11 @@ function statusDot(status) {
 
 function statusLabel(status) {
   return `${statusDot(status)}<span>${StatusMeta[status].label}</span>`;
+}
+
+function categoryBadge(category) {
+  const meta = CategoryMeta[category ?? ReportCategory.IT] ?? CategoryMeta[ReportCategory.IT];
+  return `<span class="category-badge ${meta.tone}">${escapeHtml(meta.label)}</span>`;
 }
 
 function getSortedReports() {
@@ -233,6 +238,7 @@ function renderReports() {
       (report) => `
         <button class="report-card ${report.id === selectedReport?.id ? "selected" : ""}" data-select-report="${report.id}">
           <div class="card-title">${statusDot(report.currentStatus)}<strong>${escapeHtml(report.title)}</strong></div>
+          <div class="card-tags">${categoryBadge(report.category)}</div>
           <p>${escapeHtml(report.content.slice(0, 170))}${report.content.length > 170 ? "..." : ""}</p>
           <dl class="meta-grid">
             <div><dt>Publicado</dt><dd>${formatDate(report.publishedAt)}</dd></div>
@@ -310,6 +316,7 @@ function renderReportDetail(report) {
       <div class="detail-heading">
         <div>
           <div class="status-pill ${StatusMeta[report.currentStatus].tone}">${statusLabel(report.currentStatus)}</div>
+          ${categoryBadge(report.category)}
           <h2>${escapeHtml(report.title)}</h2>
         </div>
         <button class="danger" data-delete-report="${report.id}">Eliminar</button>
@@ -798,6 +805,11 @@ function renderCreate() {
           ${statuses.map((status) => `<option value="${status}">${StatusMeta[status].label}</option>`).join("")}
         </select>
       </label>
+      <label>Clase
+        <select name="category" required>
+          ${categories.map((category) => `<option value="${category}">${CategoryMeta[category].label}</option>`).join("")}
+        </select>
+      </label>
       <label>Texto / contenido
         <textarea name="content" rows="9" required placeholder="Describe el parte inicial"></textarea>
       </label>
@@ -814,6 +826,7 @@ function renderCreate() {
         title: form.get("title"),
         content: form.get("content"),
         status: form.get("status"),
+        category: form.get("category"),
         user: state.activeUser,
       });
       state.selectedReportId = report.id;

@@ -10,6 +10,27 @@ export const HistoryEntryType = Object.freeze({
   STATUS_CHANGE: "CAMBIO_ESTADO",
 });
 
+export const ReportCategory = Object.freeze({
+  IT: "IT",
+  INSTALLATIONS: "INSTALLATIONS",
+  PURCHASES: "PURCHASES",
+});
+
+export const CategoryMeta = Object.freeze({
+  [ReportCategory.IT]: {
+    label: "IT",
+    tone: "blue",
+  },
+  [ReportCategory.INSTALLATIONS]: {
+    label: "Instalaciones",
+    tone: "teal",
+  },
+  [ReportCategory.PURCHASES]: {
+    label: "Compras",
+    tone: "purple",
+  },
+});
+
 export const StatusMeta = Object.freeze({
   [ReportStatus.GREEN]: {
     label: "Solucionado",
@@ -32,3 +53,4 @@ export const StatusMeta = Object.freeze({
 });
 
 export const statuses = Object.values(ReportStatus);
+export const categories = Object.values(ReportCategory);

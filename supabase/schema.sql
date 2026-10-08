@@ -4,10 +4,15 @@ create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   content text not null,
+  category text not null default 'IT' check (category in ('IT', 'INSTALLATIONS', 'PURCHASES')),
   current_status text not null check (current_status in ('GREEN', 'YELLOW', 'RED')),
   published_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.reports
+  add column if not exists category text not null default 'IT'
+  check (category in ('IT', 'INSTALLATIONS', 'PURCHASES'));
 
 create table if not exists public.report_history (
   id uuid primary key default gen_random_uuid(),

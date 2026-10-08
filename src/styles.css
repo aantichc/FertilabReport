@@ -266,6 +266,12 @@ textarea {
   min-width: 0;
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .card-title strong,
 .detail h2,
 .report-card p,
@@ -439,6 +445,35 @@ dd {
 
 .status-pill .status-dot {
   background: #fff;
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 26px;
+  margin-top: 8px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #0f172a;
+  background: #e8edf3;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.category-badge.blue {
+  color: #17406d;
+  background: #dbeafe;
+}
+
+.category-badge.teal {
+  color: #0f5c5c;
+  background: #ccfbf1;
+}
+
+.category-badge.purple {
+  color: #5b2a86;
+  background: #ede9fe;
 }
 
 .empty {

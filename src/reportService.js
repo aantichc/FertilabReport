@@ -1,4 +1,4 @@
-import { HistoryEntryType } from "./models.js";
+import { HistoryEntryType, ReportCategory } from "./models.js";
 import { notifyReportCreated } from "./notificationService.js";
 import { recipientService } from "./recipientService.js";
 import { supabaseClient } from "./supabaseClient.js";
@@ -12,6 +12,7 @@ function normalizeReports(reports) {
     id: report.id,
     title: report.title,
     content: report.content,
+    category: report.category ?? ReportCategory.IT,
     currentStatus: report.current_status,
     publishedAt: report.published_at,
     updatedAt: report.updated_at,
@@ -34,12 +35,13 @@ export const reportService = {
     return normalizeReports(await supabaseClient.listReports());
   },
 
-  async createReport({ title, content, status, user }) {
+  async createReport({ title, content, status, category, user }) {
     const timestamp = nowIso();
     const report = await supabaseClient.createReport({
       id: crypto.randomUUID(),
       title: title.trim(),
       content: content.trim(),
+      category,
       current_status: status,
       published_at: timestamp,
       updated_at: timestamp,

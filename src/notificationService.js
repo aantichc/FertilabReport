@@ -1,6 +1,6 @@
 import { storage } from "./storage.js";
 import { supabaseClient } from "./supabaseClient.js";
-import { StatusMeta } from "./models.js";
+import { CategoryMeta, ReportCategory, StatusMeta } from "./models.js";
 
 export async function notifyReportCreated(report, recipients) {
   if (!recipients.length) {
@@ -15,6 +15,7 @@ export async function notifyReportCreated(report, recipients) {
     createdAt: new Date().toISOString(),
     payload: {
       title: report.title,
+      category: CategoryMeta[report.category ?? ReportCategory.IT].label,
       status: StatusMeta[report.currentStatus].label,
       content: report.content,
       publishedAt: report.publishedAt,
