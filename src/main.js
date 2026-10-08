@@ -20,6 +20,7 @@ const state = {
   calendarNotes: [],
   calendarMode: "month",
   calendarDate: new Date(),
+  selectedCalendarNoteId: null,
   loading: false,
   refreshing: false,
   error: "",
@@ -418,6 +419,7 @@ function renderCalendar() {
       </div>
     </section>
     ${renderCalendarNoteForm()}
+    ${renderSelectedCalendarNote()}
     ${renderCalendarGrid(events)}
   `);
 
@@ -469,6 +471,16 @@ function renderCalendar() {
       if (!confirmed) return;
       withReload(() => supabaseClient.deleteCalendarNote(button.dataset.deleteNote));
     });
+  });
+  document.querySelectorAll("[data-select-note]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCalendarNoteId = button.dataset.selectNote;
+      render();
+    });
+  });
+  document.querySelector("[data-close-note-detail]")?.addEventListener("click", () => {
+    state.selectedCalendarNoteId = null;
+    render();
   });
   document.querySelectorAll("[data-calendar-month]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -532,6 +544,26 @@ function renderCalendarNoteForm() {
       </label>
       <button type="submit">Guardar nota</button>
     </form>
+  `;
+}
+
+function renderSelectedCalendarNote() {
+  const note = state.calendarNotes.find((item) => item.id === state.selectedCalendarNoteId);
+  if (!note) return "";
+
+  return `
+    <section class="note-detail">
+      <div>
+        <span>Nota · ${escapeHtml(formatDay(`${note.noteDate}T12:00:00`))}</span>
+        <h2>${escapeHtml(note.title)}</h2>
+        ${note.content ? `<p>${escapeHtml(note.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
+        <small>Creada por ${escapeHtml(note.createdBy || "Usuario sin identificar")}</small>
+      </div>
+      <div class="note-detail-actions">
+        <button data-close-note-detail type="button">Cerrar</button>
+        <button class="danger" data-delete-note="${note.id}" type="button">Eliminar</button>
+      </div>
+    </section>
   `;
 }
 
@@ -662,11 +694,10 @@ function renderCalendarEvent(event) {
 function renderCalendarMonthEvent(event) {
   if (event.kind === "note") {
     return `
-      <div class="month-event note-month-event">
+      <button class="month-event note-month-event" data-select-note="${event.id}" type="button">
         <span>Nota</span>
         <strong>${escapeHtml(event.title)}</strong>
-        <button class="danger subtle compact-note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
-      </div>
+      </button>
     `;
   }
 
@@ -686,9 +717,9 @@ function renderCalendarWeekEvent(event) {
         <div class="week-event-title">
           <span class="calendar-event-time">Nota</span>
           <strong>${escapeHtml(event.title)}</strong>
-          <button class="danger subtle compact-note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
         </div>
         ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
+        <button class="danger subtle week-note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
       </div>
     `;
   }

@@ -533,6 +533,43 @@ dd {
   box-shadow: var(--shadow);
 }
 
+.note-detail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.note-detail span,
+.note-detail small {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.note-detail h2 {
+  margin: 6px 0 8px;
+  font-size: 1.25rem;
+}
+
+.note-detail p {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.note-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .calendar-grid {
   display: grid;
   gap: 12px;
@@ -642,7 +679,7 @@ dd {
 }
 
 .note-week-event .week-event-title {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .week-event-title .status-dot {
@@ -679,6 +716,13 @@ dd {
 
 .note-week-event {
   border: 1px solid #e2e8f0;
+}
+
+.week-note-delete {
+  justify-self: start;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 0.76rem;
 }
 
 .month-event {
@@ -728,7 +772,7 @@ dd {
 }
 
 .note-month-event {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -739,12 +783,6 @@ dd {
   color: #fff;
   background: var(--accent);
   border-radius: 999px;
-}
-
-.compact-note-delete {
-  min-height: 24px;
-  padding: 0 7px;
-  font-size: 0.72rem;
 }
 
 .more-events {
@@ -983,6 +1021,7 @@ dd {
   .page-header,
   .detail-heading,
   .recipient,
+  .note-detail,
   .user-bar {
     align-items: stretch;
     flex-direction: column;
