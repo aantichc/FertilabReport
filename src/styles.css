@@ -603,6 +603,58 @@ dd {
   padding-right: 2px;
 }
 
+.calendar-grid.month .calendar-cell-events {
+  max-height: none;
+  overflow: hidden;
+  gap: 5px;
+  padding-right: 0;
+}
+
+.month-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #f8fafc;
+  text-align: left;
+}
+
+.month-event span {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.month-event strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+
+.note-month-event {
+  border: 1px solid #e2e8f0;
+}
+
+.note-month-event span {
+  color: var(--yellow);
+}
+
+.more-events {
+  min-height: 28px;
+  padding: 0 8px;
+  color: var(--accent);
+  background: transparent;
+  border-style: dashed;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
 .year-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

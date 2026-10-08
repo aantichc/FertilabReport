@@ -477,6 +477,13 @@ function renderCalendar() {
       render();
     });
   });
+  document.querySelectorAll("[data-calendar-day]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.calendarDate = new Date(`${button.dataset.calendarDay}T12:00:00`);
+      state.calendarMode = "day";
+      render();
+    });
+  });
 }
 
 function calendarModeLabel(mode) {
@@ -571,6 +578,10 @@ function renderYearCalendar(events) {
 }
 
 function renderCalendarCell(date, events, isMuted) {
+  const isMonth = state.calendarMode === "month";
+  const visibleEvents = isMonth ? events.slice(0, 4) : events;
+  const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
+
   return `
     <article class="calendar-cell ${isMuted ? "muted-cell" : ""}">
       <div class="calendar-cell-date">
@@ -578,7 +589,12 @@ function renderCalendarCell(date, events, isMuted) {
         <span>${new Intl.DateTimeFormat("es-ES", { weekday: "short" }).format(date)}</span>
       </div>
       <div class="calendar-cell-events">
-        ${events.map(renderCalendarEvent).join("") || `<span class="muted">Sin movimientos</span>`}
+        ${
+          visibleEvents.length
+            ? visibleEvents.map(isMonth ? renderCalendarMonthEvent : renderCalendarEvent).join("")
+            : `<span class="muted">Sin movimientos</span>`
+        }
+        ${hiddenCount ? `<button class="more-events" data-calendar-day="${dateKey(date)}">+${hiddenCount} más</button>` : ""}
       </div>
     </article>
   `;
@@ -638,6 +654,24 @@ function renderCalendarEvent(event) {
         ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin comentario adicional.</p>`}
         <span class="actor">Por ${escapeHtml(event.user || "Usuario sin identificar")}</span>
       </div>
+    </button>
+  `;
+}
+
+function renderCalendarMonthEvent(event) {
+  if (event.kind === "note") {
+    return `
+      <div class="month-event note-month-event">
+        <span>Nota</span>
+        <strong>${escapeHtml(event.title)}</strong>
+      </div>
+    `;
+  }
+
+  return `
+    <button class="month-event" data-calendar-report="${event.reportId}">
+      <span>${formatTime(event.createdAt)}</span>
+      <strong>${escapeHtml(event.reportTitle)}</strong>
     </button>
   `;
 }
