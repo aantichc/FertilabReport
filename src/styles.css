@@ -995,6 +995,19 @@ dd {
   border-color: var(--accent);
 }
 
+.calendar-event.urgent-event,
+.month-event.urgent-event,
+.week-event.urgent-event {
+  border-color: #ef9a9a;
+  background: #fff5f5;
+}
+
+.calendar-event.urgent-event:hover,
+.month-event.urgent-event:hover,
+.week-event.urgent-event:hover {
+  border-color: var(--danger);
+}
+
 .calendar-event-time {
   display: inline-flex;
   align-items: center;

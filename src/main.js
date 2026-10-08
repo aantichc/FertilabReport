@@ -418,6 +418,13 @@ function renderReportDetail(report) {
         </label>
         <button type="submit">Guardar estado</button>
       </form>
+      <form class="inline-form" id="urgency-form">
+        <label class="check-field">
+          <input name="isUrgent" type="checkbox" value="yes" ${report.isUrgent ? "checked" : ""} />
+          <span>Marcar como urgente</span>
+        </label>
+        <button type="submit">Guardar urgencia</button>
+      </form>
       <form class="stack-form" id="update-form">
         <label>Añadir actualización
           <textarea name="content" rows="4" required placeholder="Describe la nueva información sin sobrescribir el historial anterior"></textarea>
@@ -465,6 +472,7 @@ function buildCalendarEvents() {
         reportId: report.id,
         reportTitle: report.title,
         reportCategory: report.category,
+        reportIsUrgent: report.isUrgent,
         reportStatus: report.currentStatus,
         type: entry.type,
         content: entry.content,
@@ -1054,7 +1062,7 @@ function renderCalendarEvent(event) {
       : `<div class="transition compact-transition">${statusLabel(event.newStatus)}</div>`;
 
   return `
-    <button class="calendar-event" data-calendar-report="${event.reportId}">
+    <button class="calendar-event ${event.reportIsUrgent ? "urgent-event" : ""}" data-calendar-report="${event.reportId}">
       <div class="calendar-event-body">
         <div class="calendar-event-head">
           ${statusDot(event.newStatus || event.reportStatus)}
@@ -1091,7 +1099,7 @@ function renderCalendarMonthEvent(event) {
   }
 
   return `
-    <button class="month-event" data-calendar-report="${event.reportId}">
+    <button class="month-event ${event.reportIsUrgent ? "urgent-event" : ""}" data-calendar-report="${event.reportId}">
       ${statusDot(event.newStatus || event.reportStatus)}
       <strong>${escapeHtml(event.reportTitle)}</strong>
       <small>${escapeHtml(StatusMeta[event.newStatus || event.reportStatus].label)}</small>
@@ -1128,7 +1136,7 @@ function renderCalendarWeekEvent(event) {
   }
 
   return `
-    <button class="week-event" data-calendar-report="${event.reportId}">
+    <button class="week-event ${event.reportIsUrgent ? "urgent-event" : ""}" data-calendar-report="${event.reportId}">
       <div class="week-event-title">
         ${statusDot(event.newStatus || event.reportStatus)}
         <strong>${escapeHtml(event.reportTitle)}</strong>
@@ -1155,6 +1163,12 @@ function bindDetailActions() {
     if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
     withReload(() => reportService.addUpdate(report.id, form.get("content"), state.activeUser));
+  });
+
+  document.querySelector("#urgency-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    withReload(() => reportService.setUrgency(report.id, form.get("isUrgent") === "yes"));
   });
 
   document.querySelector("[data-delete-report]")?.addEventListener("click", () => {

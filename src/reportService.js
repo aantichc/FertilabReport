@@ -101,6 +101,10 @@ export const reportService = {
     await supabaseClient.updateReport(reportId, { current_status: newStatus, updated_at: timestamp });
   },
 
+  async setUrgency(reportId, isUrgent) {
+    await supabaseClient.updateReport(reportId, { is_urgent: Boolean(isUrgent), updated_at: nowIso() });
+  },
+
   async deleteReport(reportId) {
     await supabaseClient.deleteReport(reportId);
   },
