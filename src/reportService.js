@@ -1,4 +1,4 @@
-import { HistoryEntryType, ReportStatus } from "./models.js";
+import { HistoryEntryType } from "./models.js";
 import { notifyReportCreated } from "./notificationService.js";
 import { recipientService } from "./recipientService.js";
 import { supabaseClient } from "./supabaseClient.js";
@@ -99,33 +99,5 @@ export const reportService = {
 
   async deleteReport(reportId) {
     await supabaseClient.deleteReport(reportId);
-  },
-
-  async seedIfEmpty() {
-    if ((await this.getReports()).length > 0) return;
-    const timestamp = new Date();
-    timestamp.setMinutes(timestamp.getMinutes() - 95);
-    const publishedAt = timestamp.toISOString();
-    const updatedAt = new Date().toISOString();
-
-    const report = await supabaseClient.createReport({
-      id: crypto.randomUUID(),
-      title: "Problema con el servidor principal",
-      content: "El servidor principal ha dejado de responder y se está investigando la causa.",
-      current_status: ReportStatus.RED,
-      published_at: publishedAt,
-      updated_at: updatedAt,
-    });
-
-    await supabaseClient.createHistoryEntry({
-      id: crypto.randomUUID(),
-      report_id: report.id,
-      type: HistoryEntryType.CREATED,
-      content: "Problema detectado. El servidor principal no responde.",
-      previous_status: null,
-      new_status: ReportStatus.RED,
-      created_at: publishedAt,
-      user_name: "Sistema",
-    });
   },
 };

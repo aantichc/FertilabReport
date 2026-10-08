@@ -891,7 +891,6 @@ async function loadSharedData() {
   render();
 
   try {
-    await reportService.seedIfEmpty();
     const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
