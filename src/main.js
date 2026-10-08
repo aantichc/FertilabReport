@@ -113,6 +113,10 @@ function categoryBadge(category) {
   return `<span class="category-badge ${meta.tone}">${escapeHtml(meta.label)}</span>`;
 }
 
+function urgencyBadge(isUrgent) {
+  return isUrgent ? `<span class="urgency-badge">Urgente</span>` : "";
+}
+
 function getSortedReports() {
   const reports = state.reports;
   const filtered = state.filter === "ALL" ? reports : reports.filter((report) => report.currentStatus === state.filter);
@@ -236,9 +240,9 @@ function renderReports() {
   const cards = reports
     .map(
       (report) => `
-        <button class="report-card ${report.id === selectedReport?.id ? "selected" : ""}" data-select-report="${report.id}">
+        <button class="report-card ${report.isUrgent ? "urgent" : ""} ${report.id === selectedReport?.id ? "selected" : ""}" data-select-report="${report.id}">
           <div class="card-title">${statusDot(report.currentStatus)}<strong>${escapeHtml(report.title)}</strong></div>
-          <div class="card-tags">${categoryBadge(report.category)}</div>
+          <div class="card-tags">${urgencyBadge(report.isUrgent)}${categoryBadge(report.category)}</div>
           <p>${escapeHtml(report.content.slice(0, 170))}${report.content.length > 170 ? "..." : ""}</p>
           <dl class="meta-grid">
             <div><dt>Publicado</dt><dd>${formatDate(report.publishedAt)}</dd></div>
@@ -316,6 +320,7 @@ function renderReportDetail(report) {
       <div class="detail-heading">
         <div>
           <div class="status-pill ${StatusMeta[report.currentStatus].tone}">${statusLabel(report.currentStatus)}</div>
+          ${urgencyBadge(report.isUrgent)}
           ${categoryBadge(report.category)}
           <h2>${escapeHtml(report.title)}</h2>
         </div>
@@ -810,6 +815,10 @@ function renderCreate() {
           ${categories.map((category) => `<option value="${category}">${CategoryMeta[category].label}</option>`).join("")}
         </select>
       </label>
+      <label class="check-field">
+        <input name="isUrgent" type="checkbox" value="yes" />
+        <span>Marcar como urgente</span>
+      </label>
       <label>Texto / contenido
         <textarea name="content" rows="9" required placeholder="Describe el parte inicial"></textarea>
       </label>
@@ -827,6 +836,7 @@ function renderCreate() {
         content: form.get("content"),
         status: form.get("status"),
         category: form.get("category"),
+        isUrgent: form.get("isUrgent") === "yes",
         user: state.activeUser,
       });
       state.selectedReportId = report.id;

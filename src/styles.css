@@ -254,6 +254,16 @@ textarea {
   box-shadow: none;
 }
 
+.report-card.urgent {
+  border-color: #ef9a9a;
+  background: #fff5f5;
+}
+
+.report-card.urgent.selected {
+  border-color: var(--danger);
+  box-shadow: 0 12px 30px rgba(180, 35, 24, 0.14);
+}
+
 .report-card.selected {
   border-color: var(--accent);
   box-shadow: var(--shadow);
@@ -474,6 +484,34 @@ dd {
 .category-badge.purple {
   color: #5b2a86;
   background: #ede9fe;
+}
+
+.urgency-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 26px;
+  margin-top: 8px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--text);
+}
+
+.check-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--danger);
 }
 
 .empty {

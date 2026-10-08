@@ -13,6 +13,7 @@ function normalizeReports(reports) {
     title: report.title,
     content: report.content,
     category: report.category ?? ReportCategory.IT,
+    isUrgent: Boolean(report.is_urgent),
     currentStatus: report.current_status,
     publishedAt: report.published_at,
     updatedAt: report.updated_at,
@@ -35,13 +36,14 @@ export const reportService = {
     return normalizeReports(await supabaseClient.listReports());
   },
 
-  async createReport({ title, content, status, category, user }) {
+  async createReport({ title, content, status, category, isUrgent, user }) {
     const timestamp = nowIso();
     const report = await supabaseClient.createReport({
       id: crypto.randomUUID(),
       title: title.trim(),
       content: content.trim(),
       category,
+      is_urgent: Boolean(isUrgent),
       current_status: status,
       published_at: timestamp,
       updated_at: timestamp,

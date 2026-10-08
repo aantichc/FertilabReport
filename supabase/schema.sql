@@ -5,6 +5,7 @@ create table if not exists public.reports (
   title text not null,
   content text not null,
   category text not null default 'IT' check (category in ('IT', 'INSTALLATIONS', 'PURCHASES')),
+  is_urgent boolean not null default false,
   current_status text not null check (current_status in ('GREEN', 'YELLOW', 'RED')),
   published_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -13,6 +14,9 @@ create table if not exists public.reports (
 alter table public.reports
   add column if not exists category text not null default 'IT'
   check (category in ('IT', 'INSTALLATIONS', 'PURCHASES'));
+
+alter table public.reports
+  add column if not exists is_urgent boolean not null default false;
 
 create table if not exists public.report_history (
   id uuid primary key default gen_random_uuid(),

@@ -16,6 +16,7 @@ export async function notifyReportCreated(report, recipients) {
     payload: {
       title: report.title,
       category: CategoryMeta[report.category ?? ReportCategory.IT].label,
+      urgency: report.isUrgent ? "Urgente" : "Normal",
       status: StatusMeta[report.currentStatus].label,
       content: report.content,
       publishedAt: report.publishedAt,

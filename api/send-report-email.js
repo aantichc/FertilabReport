@@ -23,6 +23,7 @@ function buildEmailHtml(report) {
       <h1 style="margin: 0 0 16px;">Nuevo parte publicado</h1>
       <p><strong>Título:</strong> ${escapeHtml(report.title)}</p>
       <p><strong>Clase:</strong> ${escapeHtml(report.category || "IT")}</p>
+      <p><strong>Urgencia:</strong> ${escapeHtml(report.urgency || "Normal")}</p>
       <p><strong>Estado inicial:</strong> ${escapeHtml(report.status)}</p>
       <p><strong>Publicado:</strong> ${escapeHtml(formatDate(report.publishedAt))}</p>
       <div style="margin: 18px 0; padding: 14px; border-left: 4px solid #116466; background: #f6f7f9;">
