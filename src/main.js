@@ -24,6 +24,8 @@ const state = {
   calendarMode: "month",
   calendarDate: new Date(),
   selectedCalendarNoteId: null,
+  selectedPreventiveTaskId: null,
+  confirmDialog: null,
   loading: false,
   refreshing: false,
   error: "",
@@ -240,6 +242,7 @@ function renderShell(content) {
         </div>
         ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
         ${content}
+        ${renderConfirmDialog()}
       </main>
     </div>
   `;
@@ -261,6 +264,36 @@ function renderShell(content) {
     stopAutoRefresh();
     render();
   });
+  document.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => {
+    state.confirmDialog = null;
+    render();
+  });
+  document.querySelector("[data-confirm-accept]")?.addEventListener("click", () => {
+    const action = state.confirmDialog?.action;
+    state.confirmDialog = null;
+    if (action) withReload(action);
+  });
+}
+
+function renderConfirmDialog() {
+  if (!state.confirmDialog) return "";
+  return `
+    <div class="modal-backdrop" role="presentation">
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <h2 id="confirm-title">${escapeHtml(state.confirmDialog.title)}</h2>
+        <p>${escapeHtml(state.confirmDialog.message)}</p>
+        <div class="dialog-actions">
+          <button type="button" data-confirm-cancel>Cancelar</button>
+          <button class="danger" type="button" data-confirm-accept>${escapeHtml(state.confirmDialog.acceptLabel ?? "Eliminar")}</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function askConfirmation({ title, message, acceptLabel = "Eliminar", action }) {
+  state.confirmDialog = { title, message, acceptLabel, action };
+  render();
 }
 
 function renderReports() {
@@ -558,6 +591,7 @@ function renderCalendar() {
     ${renderCalendarNoteForm()}
     ${renderPreventiveForm()}
     ${renderSelectedCalendarNote()}
+    ${renderSelectedPreventiveTask()}
     ${renderCalendarGrid(events)}
   `);
 
@@ -630,28 +664,63 @@ function renderCalendar() {
   document.querySelectorAll("[data-delete-note]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      const confirmed = window.confirm("¿Eliminar esta nota del calendario?");
-      if (!confirmed) return;
-      withReload(() => supabaseClient.deleteCalendarNote(button.dataset.deleteNote));
+      askConfirmation({
+        title: "Eliminar nota",
+        message: "¿Eliminar esta nota del calendario?",
+        action: () => supabaseClient.deleteCalendarNote(button.dataset.deleteNote),
+      });
     });
   });
   document.querySelectorAll("[data-delete-preventive]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      const confirmed = window.confirm("¿Eliminar este preventivo y todas sus repeticiones vinculadas?");
-      if (!confirmed) return;
-      withReload(() => supabaseClient.deletePreventiveTask(button.dataset.deletePreventive));
+      askConfirmation({
+        title: "Eliminar preventivo",
+        message: "Se eliminará este preventivo y todas sus repeticiones vinculadas.",
+        action: () => supabaseClient.deletePreventiveTask(button.dataset.deletePreventive),
+      });
+    });
+  });
+  document.querySelectorAll("[data-select-preventive]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedPreventiveTaskId = button.dataset.selectPreventive;
+      state.selectedCalendarNoteId = null;
+      render();
     });
   });
   document.querySelectorAll("[data-select-note]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedCalendarNoteId = button.dataset.selectNote;
+      state.selectedPreventiveTaskId = null;
       render();
     });
   });
   document.querySelector("[data-close-note-detail]")?.addEventListener("click", () => {
     state.selectedCalendarNoteId = null;
     render();
+  });
+  document.querySelector("[data-close-preventive-detail]")?.addEventListener("click", () => {
+    state.selectedPreventiveTaskId = null;
+    render();
+  });
+  document.querySelector("#preventive-detail-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const id = String(form.get("id"));
+    withReload(() =>
+      supabaseClient.updatePreventiveTask(id, {
+        title: String(form.get("title")).trim(),
+        content: String(form.get("content") ?? "").trim(),
+        category: form.get("category"),
+        start_date: form.get("startDate"),
+        repeat_enabled: form.get("repeatEnabled") === "yes",
+        repeat_every_count: Number(form.get("repeatEveryCount") || 1),
+        repeat_every_unit: form.get("repeatEveryUnit"),
+        notify_enabled: form.get("notifyEnabled") === "yes",
+        notify_lead_count: Number(form.get("notifyLeadCount") || 0),
+        notify_lead_unit: form.get("notifyLeadUnit"),
+      }),
+    );
   });
   document.querySelectorAll("[data-calendar-month]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -793,6 +862,73 @@ function renderSelectedCalendarNote() {
   `;
 }
 
+function renderSelectedPreventiveTask() {
+  const task = state.preventiveTasks.find((item) => item.id === state.selectedPreventiveTaskId);
+  if (!task) return "";
+
+  return `
+    <section class="note-detail preventive-detail">
+      <form id="preventive-detail-form" class="preventive-detail-form">
+        <input type="hidden" name="id" value="${task.id}" />
+        <div class="detail-heading compact-heading">
+          <div>
+            <span class="eyebrow">Preventivo</span>
+            <h2>${escapeHtml(task.title)}</h2>
+          </div>
+          <button data-close-preventive-detail type="button">Cerrar</button>
+        </div>
+        <div class="edit-grid">
+          <label>Fecha inicial
+            <input type="date" name="startDate" required value="${escapeHtml(task.startDate)}" />
+          </label>
+          <label>Clase
+            <select name="category" required>
+              ${categories.map((category) => `<option value="${category}" ${task.category === category ? "selected" : ""}>${CategoryMeta[category].label}</option>`).join("")}
+            </select>
+          </label>
+          <label>Título
+            <input name="title" required maxlength="120" value="${escapeHtml(task.title)}" />
+          </label>
+          <label>Detalle
+            <input name="content" value="${escapeHtml(task.content)}" />
+          </label>
+          <label class="check-field">
+            <input name="repeatEnabled" type="checkbox" value="yes" ${task.repeatEnabled ? "checked" : ""} />
+            <span>Repetir</span>
+          </label>
+          <label>Cada
+            <input name="repeatEveryCount" type="number" min="1" value="${task.repeatEveryCount}" />
+          </label>
+          <label>Periodo
+            <select name="repeatEveryUnit">
+              <option value="days" ${task.repeatEveryUnit === "days" ? "selected" : ""}>Días</option>
+              <option value="weeks" ${task.repeatEveryUnit === "weeks" ? "selected" : ""}>Semanas</option>
+              <option value="months" ${task.repeatEveryUnit === "months" ? "selected" : ""}>Meses</option>
+            </select>
+          </label>
+          <label class="check-field">
+            <input name="notifyEnabled" type="checkbox" value="yes" ${task.notifyEnabled ? "checked" : ""} />
+            <span>Avisar por correo</span>
+          </label>
+          <label>Antelación
+            <input name="notifyLeadCount" type="number" min="0" value="${task.notifyLeadCount}" />
+          </label>
+          <label>Unidad
+            <select name="notifyLeadUnit">
+              <option value="days" ${task.notifyLeadUnit === "days" ? "selected" : ""}>Días antes</option>
+              <option value="weeks" ${task.notifyLeadUnit === "weeks" ? "selected" : ""}>Semanas antes</option>
+            </select>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button type="submit">Guardar cambios</button>
+          <button class="danger" data-delete-preventive="${task.id}" type="button">Eliminar bloque</button>
+        </div>
+      </form>
+    </section>
+  `;
+}
+
 function renderCalendarGrid(events) {
   if (state.calendarMode === "year") return renderYearCalendar(events);
   const days = calendarVisibleDays();
@@ -881,7 +1017,7 @@ function renderCalendarDay(key, events) {
 function renderCalendarEvent(event) {
   if (event.kind === "preventive") {
     return `
-      <div class="calendar-event preventive-event">
+      <div class="calendar-event preventive-event" data-select-preventive="${event.taskId}" role="button" tabindex="0">
         <div class="calendar-event-body">
           <div class="calendar-event-head">
             <span class="calendar-event-time preventive-icon">P</span>
@@ -937,7 +1073,7 @@ function renderCalendarEvent(event) {
 function renderCalendarMonthEvent(event) {
   if (event.kind === "preventive") {
     return `
-      <div class="month-event preventive-month-event">
+      <div class="month-event preventive-month-event" data-select-preventive="${event.taskId}" role="button" tabindex="0">
         <span class="preventive-icon">P</span>
         <strong>${escapeHtml(event.title)}</strong>
         <button class="danger subtle compact-delete" data-delete-preventive="${event.taskId}" type="button">Eliminar</button>
@@ -966,7 +1102,7 @@ function renderCalendarMonthEvent(event) {
 function renderCalendarWeekEvent(event) {
   if (event.kind === "preventive") {
     return `
-      <div class="week-event preventive-week-event">
+      <div class="week-event preventive-week-event" data-select-preventive="${event.taskId}" role="button" tabindex="0">
         <div class="week-event-title">
           <span class="calendar-event-time preventive-icon">P</span>
           <strong>${escapeHtml(event.title)}</strong>
@@ -1022,12 +1158,14 @@ function bindDetailActions() {
   });
 
   document.querySelector("[data-delete-report]")?.addEventListener("click", () => {
-    const confirmed = window.confirm(
-      "¿Estás seguro de que quieres eliminar este parte?\n\nEsta acción eliminará también todo su historial de actualizaciones y no podrá recuperarse.",
-    );
-    if (!confirmed) return;
-    state.selectedReportId = null;
-    withReload(() => reportService.deleteReport(report.id));
+    askConfirmation({
+      title: "Eliminar parte",
+      message: "Esta acción eliminará también todo su historial de actualizaciones y no podrá recuperarse.",
+      action: () => {
+        state.selectedReportId = null;
+        return reportService.deleteReport(report.id);
+      },
+    });
   });
 }
 
@@ -1120,7 +1258,11 @@ function renderSettings() {
   });
   document.querySelectorAll("[data-delete-recipient]").forEach((button) => {
     button.addEventListener("click", () => {
-      withReload(() => recipientService.remove(button.dataset.deleteRecipient));
+      askConfirmation({
+        title: "Eliminar destinatario",
+        message: "Este correo dejará de recibir notificaciones de nuevos partes y preventivos.",
+        action: () => recipientService.remove(button.dataset.deleteRecipient),
+      });
     });
   });
   document.querySelectorAll("[data-edit-recipient]").forEach((button) => {

@@ -666,6 +666,27 @@ dd {
   flex-wrap: wrap;
 }
 
+.preventive-detail {
+  display: block;
+}
+
+.preventive-detail-form {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
 .calendar-grid {
   display: grid;
   gap: 12px;
@@ -1062,6 +1083,7 @@ dd {
   border-color: #bfdbfe;
   background: #eff6ff;
   padding-right: 118px;
+  cursor: pointer;
 }
 
 .note-event .calendar-event-head {
@@ -1099,6 +1121,7 @@ dd {
 .preventive-week-event {
   border: 1px solid #bfdbfe;
   background: #eff6ff;
+  cursor: pointer;
 }
 
 .preventive-month-event {
@@ -1109,6 +1132,39 @@ dd {
   min-height: 24px;
   padding: 0 7px;
   font-size: 0.72rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.confirm-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 440px);
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .entry-screen {
@@ -1145,6 +1201,7 @@ dd {
   .calendar-day,
   .calendar-note-form,
   .preventive-form,
+  .edit-grid,
   .settings-grid {
     grid-template-columns: 1fr;
   }

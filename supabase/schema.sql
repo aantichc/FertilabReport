@@ -128,10 +128,12 @@ create policy "Public delete calendar notes" on public.calendar_notes for delete
 
 drop policy if exists "Public read preventive tasks" on public.preventive_tasks;
 drop policy if exists "Public insert preventive tasks" on public.preventive_tasks;
+drop policy if exists "Public update preventive tasks" on public.preventive_tasks;
 drop policy if exists "Public delete preventive tasks" on public.preventive_tasks;
 
 create policy "Public read preventive tasks" on public.preventive_tasks for select using (true);
 create policy "Public insert preventive tasks" on public.preventive_tasks for insert with check (true);
+create policy "Public update preventive tasks" on public.preventive_tasks for update using (true) with check (true);
 create policy "Public delete preventive tasks" on public.preventive_tasks for delete using (true);
 
 drop policy if exists "Public read preventive notification log" on public.preventive_notification_log;
@@ -147,5 +149,5 @@ grant select, insert on public.report_history to anon;
 grant select, insert, update, delete on public.notification_recipients to anon;
 grant select, insert on public.email_log to anon;
 grant select, insert, delete on public.calendar_notes to anon;
-grant select, insert, delete on public.preventive_tasks to anon;
+grant select, insert, update, delete on public.preventive_tasks to anon;
 grant select, insert on public.preventive_notification_log to anon;

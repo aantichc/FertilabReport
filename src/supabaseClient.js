@@ -145,6 +145,14 @@ export const supabaseClient = {
     return rows[0];
   },
 
+  async updatePreventiveTask(id, patch) {
+    const rows = await request(`preventive_tasks?id=eq.${encode(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+    return rows[0];
+  },
+
   async deletePreventiveTask(id) {
     return request(`preventive_tasks?id=eq.${encode(id)}`, {
       method: "DELETE",
