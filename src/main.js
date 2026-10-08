@@ -10,6 +10,7 @@ const REFRESH_INTERVAL_MS = 30000;
 const state = {
   section: "reports",
   filter: "ALL",
+  categoryFilter: "ALL",
   sortBy: "updatedAt",
   listLimit: window.matchMedia("(max-width: 640px)").matches ? "3" : "ALL",
   selectedReportId: null,
@@ -117,9 +118,23 @@ function urgencyBadge(isUrgent) {
   return isUrgent ? `<span class="urgency-badge">Urgente</span>` : "";
 }
 
+function categoryOptions(selectedValue) {
+  return `
+    <option value="ALL" ${selectedValue === "ALL" ? "selected" : ""}>Todas</option>
+    ${categories.map((category) => `<option value="${category}" ${selectedValue === category ? "selected" : ""}>${CategoryMeta[category].label}</option>`).join("")}
+  `;
+}
+
+function matchesCategoryFilter(report) {
+  return state.categoryFilter === "ALL" || (report.category ?? ReportCategory.IT) === state.categoryFilter;
+}
+
 function getSortedReports() {
   const reports = state.reports;
-  const filtered = state.filter === "ALL" ? reports : reports.filter((report) => report.currentStatus === state.filter);
+  const filtered = reports.filter((report) => {
+    const matchesStatus = state.filter === "ALL" || report.currentStatus === state.filter;
+    return matchesStatus && matchesCategoryFilter(report);
+  });
 
   const sorted = filtered.sort((a, b) => {
     if (state.sortBy === "status") return StatusMeta[b.currentStatus].rank - StatusMeta[a.currentStatus].rank;
@@ -269,6 +284,11 @@ function renderReports() {
           ${statuses.map((status) => `<option value="${status}" ${state.filter === status ? "selected" : ""}>${StatusMeta[status].label}</option>`).join("")}
         </select>
       </label>
+      <label>Clase
+        <select id="filter-category">
+          ${categoryOptions(state.categoryFilter)}
+        </select>
+      </label>
       <label>Ordenar por
         <select id="sort-by">
           <option value="updatedAt" ${state.sortBy === "updatedAt" ? "selected" : ""}>Última actualización</option>
@@ -290,6 +310,10 @@ function renderReports() {
 
   document.querySelector("#filter-status").addEventListener("change", (event) => {
     state.filter = event.target.value;
+    render();
+  });
+  document.querySelector("#filter-category").addEventListener("change", (event) => {
+    state.categoryFilter = event.target.value;
     render();
   });
   document.querySelector("#sort-by").addEventListener("change", (event) => {
@@ -381,12 +405,14 @@ function renderHistoryEntry(entry) {
 
 function buildCalendarEvents() {
   const reportEvents = state.reports
+    .filter(matchesCategoryFilter)
     .flatMap((report) =>
       report.history.map((entry) => ({
         id: entry.id,
         kind: "report",
         reportId: report.id,
         reportTitle: report.title,
+        reportCategory: report.category,
         reportStatus: report.currentStatus,
         type: entry.type,
         content: entry.content,
@@ -442,6 +468,11 @@ function renderCalendar() {
         ${["year", "month", "week", "day"].map((mode) => `<button class="${state.calendarMode === mode ? "active" : ""}" data-calendar-mode="${mode}">${calendarModeLabel(mode)}</button>`).join("")}
       </div>
       <div class="calendar-nav">
+        <label>Clase
+          <select id="calendar-filter-category">
+            ${categoryOptions(state.categoryFilter)}
+          </select>
+        </label>
         <button data-calendar-prev>Anterior</button>
         <button data-calendar-today>Hoy</button>
         <button data-calendar-next>Siguiente</button>
@@ -464,6 +495,10 @@ function renderCalendar() {
       state.calendarMode = button.dataset.calendarMode;
       render();
     });
+  });
+  document.querySelector("#calendar-filter-category").addEventListener("change", (event) => {
+    state.categoryFilter = event.target.value;
+    render();
   });
   document.querySelector("[data-calendar-prev]").addEventListener("click", () => {
     moveCalendar(-1);

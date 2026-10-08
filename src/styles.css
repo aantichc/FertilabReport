@@ -587,6 +587,14 @@ dd {
   flex-wrap: wrap;
 }
 
+.calendar-nav {
+  align-items: end;
+}
+
+.calendar-nav label {
+  min-width: 150px;
+}
+
 .segmented button.active {
   background: var(--accent);
   border-color: var(--accent);
