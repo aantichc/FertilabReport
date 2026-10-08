@@ -1475,7 +1475,7 @@ function renderUserGate() {
           <h1>¿Quién está usando la app?</h1>
         </div>
         <label>Tu nombre
-          <input name="name" required autocomplete="name" placeholder="Ej. Alan" autofocus />
+          <input name="name" required autocomplete="name" placeholder="Nombre aquí" autofocus />
         </label>
         <button class="primary" type="submit">Entrar</button>
       </form>
