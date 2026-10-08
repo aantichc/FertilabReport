@@ -626,7 +626,6 @@ function renderCalendarEvent(event) {
         <div class="calendar-event-body">
           <div class="calendar-event-head">
             <span class="calendar-event-time">Nota</span>
-            <span class="event-type">Nota planificada</span>
             <strong>${escapeHtml(event.title)}</strong>
           </div>
           ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
@@ -646,9 +645,10 @@ function renderCalendarEvent(event) {
     <button class="calendar-event" data-calendar-report="${event.reportId}">
       <div class="calendar-event-body">
         <div class="calendar-event-head">
+          ${statusDot(event.newStatus || event.reportStatus)}
+          <strong>${escapeHtml(event.reportTitle)}</strong>
           <span class="calendar-event-time">${formatTime(event.createdAt)}</span>
           <span class="event-type">${escapeHtml(eventLabel(event.type))}</span>
-          <strong>${escapeHtml(event.reportTitle)}</strong>
         </div>
         ${transition}
         ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin comentario adicional.</p>`}
@@ -670,7 +670,7 @@ function renderCalendarMonthEvent(event) {
 
   return `
     <button class="month-event" data-calendar-report="${event.reportId}">
-      <span>${formatTime(event.createdAt)}</span>
+      ${statusDot(event.newStatus || event.reportStatus)}
       <strong>${escapeHtml(event.reportTitle)}</strong>
     </button>
   `;
