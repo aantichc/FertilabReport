@@ -28,9 +28,12 @@ La primera versión está construida sin dependencias externas para que sea senc
 
 ## Notificaciones
 
-El navegador no puede enviar correos reales por sí solo sin un backend o un proveedor externo. Por eso esta primera versión registra las notificaciones de creación en un log local y deja el envío encapsulado en `notificationService.js`.
+El navegador no envía correos directamente. La versión publicada usa una función serverless de Vercel en `api/send-report-email.js` y Resend para enviar emails reales al crear un parte.
 
-Cuando se conecte un backend, ese archivo es el punto de integración para enviar emails reales mediante SMTP, SendGrid, Mailgun, Microsoft Graph u otro proveedor.
+Variables necesarias en Vercel:
+
+- `RESEND_API_KEY`: API key privada de Resend.
+- `EMAIL_FROM`: remitente verificado, por ejemplo `Fertilab Reports <partes@tudominio.com>`. Si no se define, se usa `Fertilab Reports <onboarding@resend.dev>` para pruebas.
 
 Regla implementada:
 

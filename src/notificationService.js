@@ -31,5 +31,21 @@ export async function notifyReportCreated(report, recipients) {
     payload: notification.payload,
     created_at: notification.createdAt,
   });
+
+  try {
+    await fetch("/api/send-report-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipients: notification.recipients,
+        report: notification.payload,
+      }),
+    });
+  } catch (error) {
+    console.error("Email delivery failed", error);
+  }
+
   return { sent: true, notification };
 }
