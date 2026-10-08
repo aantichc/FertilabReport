@@ -1,7 +1,8 @@
 import { storage } from "./storage.js";
+import { supabaseClient } from "./supabaseClient.js";
 import { StatusMeta } from "./models.js";
 
-export function notifyReportCreated(report, recipients) {
+export async function notifyReportCreated(report, recipients) {
   if (!recipients.length) {
     return { sent: false, reason: "No hay destinatarios configurados." };
   }
@@ -22,5 +23,13 @@ export function notifyReportCreated(report, recipients) {
   };
 
   storage.appendEmailLog(notification);
+  await supabaseClient.appendEmailLog({
+    id: notification.id,
+    report_id: report.id,
+    recipients: notification.recipients,
+    subject: notification.subject,
+    payload: notification.payload,
+    created_at: notification.createdAt,
+  });
   return { sent: true, notification };
 }

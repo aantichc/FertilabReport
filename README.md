@@ -48,3 +48,15 @@ Cada parte conserva:
 - `history`: entradas cronológicas independientes.
 
 Cada entrada de historial conserva su propio `createdAt`, tipo, contenido y estado asociado. Las actualizaciones se añaden al historial y no sobrescriben entradas anteriores.
+
+## Base de datos compartida
+
+La version publicada usa Supabase para compartir partes, historial, destinatarios y log de notificaciones entre todos los usuarios.
+
+Para preparar un proyecto nuevo de Supabase:
+
+1. Abre `SQL Editor`.
+2. Crea una nueva query.
+3. Pega y ejecuta el contenido de `supabase/schema.sql`.
+
+La app conserva en `localStorage` solo el nombre del usuario activo en ese navegador.

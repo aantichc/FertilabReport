@@ -1,7 +1,8 @@
-import { HistoryEntryType, ReportStatus, StatusMeta, statuses } from "./models.js";
+import { HistoryEntryType, StatusMeta, statuses } from "./models.js";
 import { recipientService } from "./recipientService.js";
 import { reportService } from "./reportService.js";
 import { storage } from "./storage.js";
+import { supabaseClient } from "./supabaseClient.js";
 
 const state = {
   section: "reports",
@@ -9,6 +10,11 @@ const state = {
   sortBy: "updatedAt",
   selectedReportId: null,
   activeUser: storage.getActiveUser(),
+  reports: [],
+  recipients: [],
+  emailLog: [],
+  loading: false,
+  error: "",
 };
 
 const app = document.querySelector("#app");
@@ -40,7 +46,7 @@ function statusLabel(status) {
 }
 
 function getSortedReports() {
-  const reports = reportService.getReports();
+  const reports = state.reports;
   const filtered = state.filter === "ALL" ? reports : reports.filter((report) => report.currentStatus === state.filter);
 
   return filtered.sort((a, b) => {
@@ -50,8 +56,7 @@ function getSortedReports() {
 }
 
 function getSelectedReport() {
-  const reports = reportService.getReports();
-  return reports.find((report) => report.id === state.selectedReportId) ?? reports[0] ?? null;
+  return state.reports.find((report) => report.id === state.selectedReportId) ?? state.reports[0] ?? null;
 }
 
 function hasActiveUser() {
@@ -61,6 +66,17 @@ function hasActiveUser() {
 function setActiveUser(name) {
   state.activeUser = name.trim();
   storage.saveActiveUser(state.activeUser);
+}
+
+function normalizeEmailLog(log) {
+  return log.map((entry) => ({
+    id: entry.id,
+    reportId: entry.report_id,
+    recipients: entry.recipients ?? [],
+    subject: entry.subject,
+    payload: entry.payload ?? {},
+    createdAt: entry.created_at,
+  }));
 }
 
 function renderShell(content) {
@@ -88,6 +104,7 @@ function renderShell(content) {
           </div>
           <button data-change-user>${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
         </div>
+        ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
         ${content}
       </main>
     </div>
@@ -105,6 +122,11 @@ function renderShell(content) {
 }
 
 function renderReports() {
+  if (state.loading) {
+    renderShell(`<div class="empty">Cargando datos compartidos...</div>`);
+    return;
+  }
+
   const reports = getSortedReports();
   const selectedReport = getSelectedReport();
   const cards = reports
@@ -245,16 +267,14 @@ function bindDetailActions() {
     event.preventDefault();
     if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
-    reportService.changeStatus(report.id, form.get("status"), form.get("comment") ?? "", state.activeUser);
-    render();
+    withReload(() => reportService.changeStatus(report.id, form.get("status"), form.get("comment") ?? "", state.activeUser));
   });
 
   document.querySelector("#update-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
-    reportService.addUpdate(report.id, form.get("content"), state.activeUser);
-    render();
+    withReload(() => reportService.addUpdate(report.id, form.get("content"), state.activeUser));
   });
 
   document.querySelector("[data-delete-report]")?.addEventListener("click", () => {
@@ -262,9 +282,8 @@ function bindDetailActions() {
       "¿Estás seguro de que quieres eliminar este parte?\n\nEsta acción eliminará también todo su historial de actualizaciones y no podrá recuperarse.",
     );
     if (!confirmed) return;
-    reportService.deleteReport(report.id);
     state.selectedReportId = null;
-    render();
+    withReload(() => reportService.deleteReport(report.id));
   });
 }
 
@@ -296,21 +315,22 @@ function renderCreate() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     if (!ensureActiveUser()) return;
-    const report = reportService.createReport({
-      title: form.get("title"),
-      content: form.get("content"),
-      status: form.get("status"),
-      user: state.activeUser,
+    withReload(async () => {
+      const report = await reportService.createReport({
+        title: form.get("title"),
+        content: form.get("content"),
+        status: form.get("status"),
+        user: state.activeUser,
+      });
+      state.selectedReportId = report.id;
+      state.section = "reports";
     });
-    state.selectedReportId = report.id;
-    state.section = "reports";
-    render();
   });
 }
 
 function renderSettings() {
-  const recipients = recipientService.getRecipients();
-  const log = storage.getEmailLog();
+  const recipients = state.recipients;
+  const log = state.emailLog;
 
   renderShell(`
     <header class="page-header">
@@ -341,22 +361,19 @@ function renderSettings() {
   document.querySelector("#recipient-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    recipientService.add(form.get("email"));
-    render();
+    withReload(() => recipientService.add(form.get("email")));
   });
   document.querySelectorAll("[data-delete-recipient]").forEach((button) => {
     button.addEventListener("click", () => {
-      recipientService.remove(button.dataset.deleteRecipient);
-      render();
+      withReload(() => recipientService.remove(button.dataset.deleteRecipient));
     });
   });
   document.querySelectorAll("[data-edit-recipient]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.editRecipient;
-      const recipient = recipientService.getRecipients().find((item) => item.id === id);
+      const recipient = state.recipients.find((item) => item.id === id);
       const email = window.prompt("Editar correo electrónico", recipient?.email ?? "");
-      if (email) recipientService.update(id, email);
-      render();
+      if (email) withReload(() => recipientService.update(id, email));
     });
   });
 }
@@ -371,6 +388,55 @@ function renderRecipient(recipient) {
       </div>
     </div>
   `;
+}
+
+async function loadSharedData() {
+  if (!hasActiveUser()) return;
+  state.loading = true;
+  state.error = "";
+  render();
+
+  try {
+    await reportService.seedIfEmpty();
+    const [reports, recipients, emailLog] = await Promise.all([
+      reportService.getReports(),
+      recipientService.getRecipients(),
+      supabaseClient.listEmailLog(),
+    ]);
+    state.reports = reports;
+    state.recipients = recipients;
+    state.emailLog = normalizeEmailLog(emailLog);
+  } catch (error) {
+    state.error = "No se han podido cargar los datos compartidos. Revisa que las tablas de Supabase estén creadas.";
+    console.error(error);
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+async function withReload(action) {
+  state.error = "";
+  state.loading = true;
+  render();
+
+  try {
+    await action();
+    const [reports, recipients, emailLog] = await Promise.all([
+      reportService.getReports(),
+      recipientService.getRecipients(),
+      supabaseClient.listEmailLog(),
+    ]);
+    state.reports = reports;
+    state.recipients = recipients;
+    state.emailLog = normalizeEmailLog(emailLog);
+  } catch (error) {
+    state.error = "No se ha podido guardar el cambio en Supabase.";
+    console.error(error);
+  } finally {
+    state.loading = false;
+    render();
+  }
 }
 
 function openUserDialog() {
@@ -423,9 +489,9 @@ function renderUserGate() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setActiveUser(form.get("name"));
-    render();
+    loadSharedData();
   });
 }
 
-reportService.seedIfEmpty();
 render();
+loadSharedData();

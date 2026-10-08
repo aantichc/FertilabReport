@@ -1,26 +1,28 @@
-import { storage } from "./storage.js";
+import { supabaseClient } from "./supabaseClient.js";
 
 export const recipientService = {
-  getRecipients() {
-    return storage.getRecipients();
+  async getRecipients() {
+    const recipients = await supabaseClient.listRecipients();
+    return recipients.map((recipient) => ({
+      id: recipient.id,
+      email: recipient.email,
+    }));
   },
 
-  add(email) {
+  async add(email) {
     const normalized = email.trim().toLowerCase();
-    const recipients = this.getRecipients();
+    const recipients = await this.getRecipients();
     if (!normalized || recipients.some((recipient) => recipient.email === normalized)) return;
-    storage.saveRecipients([...recipients, { id: crypto.randomUUID(), email: normalized }]);
+    await supabaseClient.createRecipient(normalized);
   },
 
-  update(id, email) {
+  async update(id, email) {
     const normalized = email.trim().toLowerCase();
-    const recipients = this.getRecipients().map((recipient) =>
-      recipient.id === id ? { ...recipient, email: normalized } : recipient,
-    );
-    storage.saveRecipients(recipients);
+    if (!normalized) return;
+    await supabaseClient.updateRecipient(id, normalized);
   },
 
-  remove(id) {
-    storage.saveRecipients(this.getRecipients().filter((recipient) => recipient.id !== id));
+  async remove(id) {
+    await supabaseClient.deleteRecipient(id);
   },
 };

@@ -1,6 +1,7 @@
 import { HistoryEntryType, ReportStatus } from "./models.js";
 import { notifyReportCreated } from "./notificationService.js";
-import { storage } from "./storage.js";
+import { recipientService } from "./recipientService.js";
+import { supabaseClient } from "./supabaseClient.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -8,127 +9,123 @@ function nowIso() {
 
 function normalizeReports(reports) {
   return reports.map((report) => ({
-    ...report,
-    history: Array.isArray(report.history) ? report.history : [],
+    id: report.id,
+    title: report.title,
+    content: report.content,
+    currentStatus: report.current_status,
+    publishedAt: report.published_at,
+    updatedAt: report.updated_at,
+    history: Array.isArray(report.report_history)
+      ? report.report_history.map((entry) => ({
+          id: entry.id,
+          type: entry.type,
+          content: entry.content ?? "",
+          previousStatus: entry.previous_status,
+          newStatus: entry.new_status,
+          createdAt: entry.created_at,
+          user: entry.user_name,
+        }))
+      : [],
   }));
 }
 
 export const reportService = {
-  getReports() {
-    return normalizeReports(storage.getReports());
+  async getReports() {
+    return normalizeReports(await supabaseClient.listReports());
   },
 
-  createReport({ title, content, status, user }) {
+  async createReport({ title, content, status, user }) {
     const timestamp = nowIso();
-    const report = {
+    const report = await supabaseClient.createReport({
       id: crypto.randomUUID(),
       title: title.trim(),
       content: content.trim(),
-      currentStatus: status,
-      publishedAt: timestamp,
-      updatedAt: timestamp,
-      history: [
-        {
-          id: crypto.randomUUID(),
-          type: HistoryEntryType.CREATED,
-          content: content.trim(),
-          previousStatus: null,
-          newStatus: status,
-          createdAt: timestamp,
-          user: user?.trim() || null,
-        },
-      ],
-    };
-
-    const reports = [report, ...this.getReports()];
-    storage.saveReports(reports);
-    notifyReportCreated(report, storage.getRecipients());
-    return report;
-  },
-
-  addUpdate(reportId, content, user) {
-    const timestamp = nowIso();
-    const reports = this.getReports().map((report) => {
-      if (report.id !== reportId) return report;
-
-      return {
-        ...report,
-        updatedAt: timestamp,
-        history: [
-          ...report.history,
-          {
-            id: crypto.randomUUID(),
-            type: HistoryEntryType.UPDATE,
-            content: content.trim(),
-            previousStatus: null,
-            newStatus: report.currentStatus,
-            createdAt: timestamp,
-            user: user?.trim() || null,
-          },
-        ],
-      };
+      current_status: status,
+      published_at: timestamp,
+      updated_at: timestamp,
     });
-    storage.saveReports(reports);
-  },
 
-  changeStatus(reportId, newStatus, comment, user) {
-    const timestamp = nowIso();
-    const reports = this.getReports().map((report) => {
-      if (report.id !== reportId || report.currentStatus === newStatus) return report;
-
-      return {
-        ...report,
-        currentStatus: newStatus,
-        updatedAt: timestamp,
-        history: [
-          ...report.history,
-          {
-            id: crypto.randomUUID(),
-            type: HistoryEntryType.STATUS_CHANGE,
-            content: comment.trim(),
-            previousStatus: report.currentStatus,
-            newStatus,
-            createdAt: timestamp,
-            user: user?.trim() || null,
-          },
-        ],
-      };
+    await supabaseClient.createHistoryEntry({
+      id: crypto.randomUUID(),
+      report_id: report.id,
+      type: HistoryEntryType.CREATED,
+      content: content.trim(),
+      previous_status: null,
+      new_status: status,
+      created_at: timestamp,
+      user_name: user?.trim() || null,
     });
-    storage.saveReports(reports);
+
+    const normalizedReport = (await this.getReports()).find((item) => item.id === report.id);
+    await notifyReportCreated(normalizedReport, await recipientService.getRecipients());
+    return normalizedReport;
   },
 
-  deleteReport(reportId) {
-    const reports = this.getReports().filter((report) => report.id !== reportId);
-    storage.saveReports(reports);
+  async addUpdate(reportId, content, user) {
+    const timestamp = nowIso();
+    const report = (await this.getReports()).find((item) => item.id === reportId);
+    if (!report) return;
+
+    await supabaseClient.createHistoryEntry({
+      id: crypto.randomUUID(),
+      report_id: reportId,
+      type: HistoryEntryType.UPDATE,
+      content: content.trim(),
+      previous_status: null,
+      new_status: report.currentStatus,
+      created_at: timestamp,
+      user_name: user?.trim() || null,
+    });
+    await supabaseClient.updateReport(reportId, { updated_at: timestamp });
   },
 
-  seedIfEmpty() {
-    if (this.getReports().length > 0) return;
+  async changeStatus(reportId, newStatus, comment, user) {
+    const timestamp = nowIso();
+    const report = (await this.getReports()).find((item) => item.id === reportId);
+    if (!report || report.currentStatus === newStatus) return;
+
+    await supabaseClient.createHistoryEntry({
+      id: crypto.randomUUID(),
+      report_id: reportId,
+      type: HistoryEntryType.STATUS_CHANGE,
+      content: comment.trim(),
+      previous_status: report.currentStatus,
+      new_status: newStatus,
+      created_at: timestamp,
+      user_name: user?.trim() || null,
+    });
+    await supabaseClient.updateReport(reportId, { current_status: newStatus, updated_at: timestamp });
+  },
+
+  async deleteReport(reportId) {
+    await supabaseClient.deleteReport(reportId);
+  },
+
+  async seedIfEmpty() {
+    if ((await this.getReports()).length > 0) return;
     const timestamp = new Date();
     timestamp.setMinutes(timestamp.getMinutes() - 95);
     const publishedAt = timestamp.toISOString();
     const updatedAt = new Date().toISOString();
 
-    storage.saveReports([
-      {
-        id: crypto.randomUUID(),
-        title: "Problema con el servidor principal",
-        content: "El servidor principal ha dejado de responder y se está investigando la causa.",
-        currentStatus: ReportStatus.RED,
-        publishedAt,
-        updatedAt,
-        history: [
-          {
-            id: crypto.randomUUID(),
-            type: HistoryEntryType.CREATED,
-            content: "Problema detectado. El servidor principal no responde.",
-            previousStatus: null,
-            newStatus: ReportStatus.RED,
-            createdAt: publishedAt,
-            user: "Sistema",
-          },
-        ],
-      },
-    ]);
+    const report = await supabaseClient.createReport({
+      id: crypto.randomUUID(),
+      title: "Problema con el servidor principal",
+      content: "El servidor principal ha dejado de responder y se está investigando la causa.",
+      current_status: ReportStatus.RED,
+      published_at: publishedAt,
+      updated_at: updatedAt,
+    });
+
+    await supabaseClient.createHistoryEntry({
+      id: crypto.randomUUID(),
+      report_id: report.id,
+      type: HistoryEntryType.CREATED,
+      content: "Problema detectado. El servidor principal no responde.",
+      previous_status: null,
+      new_status: ReportStatus.RED,
+      created_at: publishedAt,
+      user_name: "Sistema",
+    });
   },
 };
