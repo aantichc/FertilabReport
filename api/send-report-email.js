@@ -43,7 +43,10 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  const gmailUser = process.env.GMAIL_USER?.trim();
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "");
+
+  if (!gmailUser || !gmailAppPassword) {
     response.status(500).json({ error: "Gmail SMTP is not configured" });
     return;
   }
@@ -62,12 +65,12 @@ export default async function handler(request, response) {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: gmailUser,
+        pass: gmailAppPassword,
       },
     });
 
-    const from = process.env.EMAIL_FROM || `Fertilab Alertas <${process.env.GMAIL_USER}>`;
+    const from = process.env.EMAIL_FROM?.trim() || `Fertilab Alertas <${gmailUser}>`;
     const result = await transporter.sendMail({
       from,
       to: recipientEmails,
