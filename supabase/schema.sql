@@ -35,10 +35,20 @@ create table if not exists public.email_log (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.calendar_notes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  content text,
+  note_date date not null,
+  created_at timestamptz not null default now(),
+  created_by text
+);
+
 alter table public.reports enable row level security;
 alter table public.report_history enable row level security;
 alter table public.notification_recipients enable row level security;
 alter table public.email_log enable row level security;
+alter table public.calendar_notes enable row level security;
 
 drop policy if exists "Public read reports" on public.reports;
 drop policy if exists "Public insert reports" on public.reports;
@@ -72,9 +82,18 @@ drop policy if exists "Public insert email log" on public.email_log;
 create policy "Public read email log" on public.email_log for select using (true);
 create policy "Public insert email log" on public.email_log for insert with check (true);
 
+drop policy if exists "Public read calendar notes" on public.calendar_notes;
+drop policy if exists "Public insert calendar notes" on public.calendar_notes;
+drop policy if exists "Public delete calendar notes" on public.calendar_notes;
+
+create policy "Public read calendar notes" on public.calendar_notes for select using (true);
+create policy "Public insert calendar notes" on public.calendar_notes for insert with check (true);
+create policy "Public delete calendar notes" on public.calendar_notes for delete using (true);
+
 grant usage on schema public to anon;
 
 grant select, insert, update, delete on public.reports to anon;
 grant select, insert on public.report_history to anon;
 grant select, insert, update, delete on public.notification_recipients to anon;
 grant select, insert on public.email_log to anon;
+grant select, insert, delete on public.calendar_notes to anon;

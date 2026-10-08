@@ -17,6 +17,9 @@ const state = {
   reports: [],
   recipients: [],
   emailLog: [],
+  calendarNotes: [],
+  calendarMode: "month",
+  calendarDate: new Date(),
   loading: false,
   refreshing: false,
   error: "",
@@ -55,6 +58,34 @@ function dayKey(iso) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function dateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfWeek(date) {
+  const next = new Date(date);
+  const day = next.getDay() || 7;
+  next.setDate(next.getDate() - day + 1);
+  return next;
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
 function escapeHtml(value) {
@@ -115,6 +146,17 @@ function normalizeEmailLog(log) {
     subject: entry.subject,
     payload: entry.payload ?? {},
     createdAt: entry.created_at,
+  }));
+}
+
+function normalizeCalendarNotes(notes) {
+  return notes.map((note) => ({
+    id: note.id,
+    title: note.title,
+    content: note.content ?? "",
+    noteDate: note.note_date,
+    createdAt: note.created_at,
+    createdBy: note.created_by,
   }));
 }
 
@@ -312,10 +354,11 @@ function renderHistoryEntry(entry) {
 }
 
 function buildCalendarEvents() {
-  return state.reports
+  const reportEvents = state.reports
     .flatMap((report) =>
       report.history.map((entry) => ({
         id: entry.id,
+        kind: "report",
         reportId: report.id,
         reportTitle: report.title,
         reportStatus: report.currentStatus,
@@ -326,8 +369,19 @@ function buildCalendarEvents() {
         user: entry.user,
         createdAt: entry.createdAt,
       })),
-    )
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    );
+
+  const noteEvents = state.calendarNotes.map((note) => ({
+    id: note.id,
+    kind: "note",
+    title: note.title,
+    content: note.content,
+    createdBy: note.createdBy,
+    createdAt: `${note.noteDate}T12:00:00`,
+    noteDate: note.noteDate,
+  }));
+
+  return [...reportEvents, ...noteEvents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
 function eventLabel(type) {
@@ -343,29 +397,28 @@ function renderCalendar() {
   }
 
   const events = buildCalendarEvents();
-  const grouped = events.reduce((groups, event) => {
-    const key = dayKey(event.createdAt);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(event);
-    return groups;
-  }, new Map());
+  const title = calendarTitle();
 
   renderShell(`
     <header class="page-header">
       <div>
         <p class="eyebrow">Calendario</p>
-        <h1>Actividad por fecha</h1>
+        <h1>${escapeHtml(title)}</h1>
       </div>
+      <button class="primary" data-open-note-form>Nueva nota</button>
     </header>
-    <section class="calendar-view">
-      ${
-        events.length
-          ? Array.from(grouped.entries())
-              .map(([key, dayEvents]) => renderCalendarDay(key, dayEvents))
-              .join("")
-          : `<div class="empty">No hay actividad registrada.</div>`
-      }
+    <section class="toolbar calendar-toolbar">
+      <div class="segmented">
+        ${["year", "month", "week", "day"].map((mode) => `<button class="${state.calendarMode === mode ? "active" : ""}" data-calendar-mode="${mode}">${calendarModeLabel(mode)}</button>`).join("")}
+      </div>
+      <div class="calendar-nav">
+        <button data-calendar-prev>Anterior</button>
+        <button data-calendar-today>Hoy</button>
+        <button data-calendar-next>Siguiente</button>
+      </div>
     </section>
+    ${renderCalendarNoteForm()}
+    ${renderCalendarGrid(events)}
   `);
 
   document.querySelectorAll("[data-calendar-report]").forEach((button) => {
@@ -375,6 +428,165 @@ function renderCalendar() {
       render();
     });
   });
+  document.querySelectorAll("[data-calendar-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.calendarMode = button.dataset.calendarMode;
+      render();
+    });
+  });
+  document.querySelector("[data-calendar-prev]").addEventListener("click", () => {
+    moveCalendar(-1);
+  });
+  document.querySelector("[data-calendar-next]").addEventListener("click", () => {
+    moveCalendar(1);
+  });
+  document.querySelector("[data-calendar-today]").addEventListener("click", () => {
+    state.calendarDate = new Date();
+    render();
+  });
+  document.querySelector("[data-open-note-form]").addEventListener("click", () => {
+    document.querySelector("#calendar-note-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector("[name='noteDate']")?.focus();
+  });
+  document.querySelector("#calendar-note-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!ensureActiveUser()) return;
+    const form = new FormData(event.currentTarget);
+    withReload(() =>
+      supabaseClient.createCalendarNote({
+        id: crypto.randomUUID(),
+        title: String(form.get("title")).trim(),
+        content: String(form.get("content") ?? "").trim(),
+        note_date: form.get("noteDate"),
+        created_by: state.activeUser,
+      }),
+    );
+  });
+  document.querySelectorAll("[data-delete-note]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const confirmed = window.confirm("¿Eliminar esta nota del calendario?");
+      if (!confirmed) return;
+      withReload(() => supabaseClient.deleteCalendarNote(button.dataset.deleteNote));
+    });
+  });
+  document.querySelectorAll("[data-calendar-month]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.calendarDate = new Date(state.calendarDate.getFullYear(), Number(button.dataset.calendarMonth), 1);
+      state.calendarMode = "month";
+      render();
+    });
+  });
+}
+
+function calendarModeLabel(mode) {
+  return {
+    year: "Año",
+    month: "Mes",
+    week: "Semana",
+    day: "Día",
+  }[mode];
+}
+
+function calendarTitle() {
+  if (state.calendarMode === "year") return String(state.calendarDate.getFullYear());
+  if (state.calendarMode === "month") {
+    return new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(state.calendarDate);
+  }
+  if (state.calendarMode === "week") {
+    const start = startOfWeek(state.calendarDate);
+    const end = addDays(start, 6);
+    return `${formatDay(start.toISOString())} - ${formatDay(end.toISOString())}`;
+  }
+  return formatDay(state.calendarDate.toISOString());
+}
+
+function moveCalendar(direction) {
+  const current = new Date(state.calendarDate);
+  if (state.calendarMode === "year") current.setFullYear(current.getFullYear() + direction);
+  if (state.calendarMode === "month") current.setMonth(current.getMonth() + direction);
+  if (state.calendarMode === "week") current.setDate(current.getDate() + direction * 7);
+  if (state.calendarMode === "day") current.setDate(current.getDate() + direction);
+  state.calendarDate = current;
+  render();
+}
+
+function renderCalendarNoteForm() {
+  return `
+    <form class="calendar-note-form" id="calendar-note-form">
+      <label>Fecha
+        <input type="date" name="noteDate" required value="${dateKey(state.calendarDate)}" />
+      </label>
+      <label>Título de la nota
+        <input name="title" required maxlength="120" placeholder="Ej. Revisión prevista" />
+      </label>
+      <label>Detalle opcional
+        <input name="content" placeholder="Información adicional" />
+      </label>
+      <button type="submit">Guardar nota</button>
+    </form>
+  `;
+}
+
+function renderCalendarGrid(events) {
+  if (state.calendarMode === "year") return renderYearCalendar(events);
+  const days = calendarVisibleDays();
+  return `
+    <section class="calendar-grid ${state.calendarMode}">
+      ${days.map((date) => renderCalendarCell(date, eventsForDate(events, date), state.calendarMode === "month" && date.getMonth() !== state.calendarDate.getMonth())).join("")}
+    </section>
+  `;
+}
+
+function calendarVisibleDays() {
+  if (state.calendarMode === "day") return [state.calendarDate];
+  if (state.calendarMode === "week") return Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(state.calendarDate), index));
+
+  const start = startOfWeek(startOfMonth(state.calendarDate));
+  const monthEnd = endOfMonth(state.calendarDate);
+  const end = addDays(startOfWeek(monthEnd), 6);
+  const days = [];
+  for (let day = start; day <= end; day = addDays(day, 1)) days.push(new Date(day));
+  return days;
+}
+
+function renderYearCalendar(events) {
+  return `
+    <section class="year-grid">
+      ${Array.from({ length: 12 }, (_, month) => {
+        const date = new Date(state.calendarDate.getFullYear(), month, 1);
+        const monthEvents = events.filter((event) => {
+          const eventDate = new Date(event.createdAt);
+          return eventDate.getFullYear() === date.getFullYear() && eventDate.getMonth() === month;
+        });
+        return `
+          <button class="year-month" data-calendar-month="${month}">
+            <strong>${new Intl.DateTimeFormat("es-ES", { month: "long" }).format(date)}</strong>
+            <span>${monthEvents.length} evento(s)</span>
+          </button>
+        `;
+      }).join("")}
+    </section>
+  `;
+}
+
+function renderCalendarCell(date, events, isMuted) {
+  return `
+    <article class="calendar-cell ${isMuted ? "muted-cell" : ""}">
+      <div class="calendar-cell-date">
+        <strong>${date.getDate()}</strong>
+        <span>${new Intl.DateTimeFormat("es-ES", { weekday: "short" }).format(date)}</span>
+      </div>
+      <div class="calendar-cell-events">
+        ${events.map(renderCalendarEvent).join("") || `<span class="muted">Sin movimientos</span>`}
+      </div>
+    </article>
+  `;
+}
+
+function eventsForDate(events, date) {
+  const key = dateKey(date);
+  return events.filter((event) => dayKey(event.createdAt) === key);
 }
 
 function renderCalendarDay(key, events) {
@@ -392,6 +604,23 @@ function renderCalendarDay(key, events) {
 }
 
 function renderCalendarEvent(event) {
+  if (event.kind === "note") {
+    return `
+      <div class="calendar-event note-event">
+        <div class="calendar-event-time">Nota</div>
+        <div class="calendar-event-body">
+          <div class="calendar-event-head">
+            <span class="event-type">Nota planificada</span>
+            <strong>${escapeHtml(event.title)}</strong>
+          </div>
+          ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
+          <span class="actor">Por ${escapeHtml(event.createdBy || "Usuario sin identificar")}</span>
+        </div>
+        <button class="danger subtle note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
+      </div>
+    `;
+  }
+
   const transition =
     event.type === HistoryEntryType.STATUS_CHANGE
       ? `<div class="transition compact-transition">${statusLabel(event.previousStatus)}<span>→</span>${statusLabel(event.newStatus)}</div>`
@@ -552,14 +781,16 @@ async function loadSharedData() {
 
   try {
     await reportService.seedIfEmpty();
-    const [reports, recipients, emailLog] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
+      supabaseClient.listCalendarNotes(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
+    state.calendarNotes = normalizeCalendarNotes(calendarNotes);
   } catch (error) {
     state.error = "No se han podido cargar los datos compartidos. Revisa que las tablas de Supabase estén creadas.";
     console.error(error);
@@ -578,14 +809,16 @@ async function refreshSharedData({ silent = true } = {}) {
   if (!silent) render();
 
   try {
-    const [reports, recipients, emailLog] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
+      supabaseClient.listCalendarNotes(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
+    state.calendarNotes = normalizeCalendarNotes(calendarNotes);
     state.error = "";
   } catch (error) {
     state.error = "No se han podido refrescar los datos compartidos.";
@@ -603,14 +836,16 @@ async function withReload(action) {
 
   try {
     await action();
-    const [reports, recipients, emailLog] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
+      supabaseClient.listCalendarNotes(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
+    state.calendarNotes = normalizeCalendarNotes(calendarNotes);
   } catch (error) {
     state.error = "No se ha podido guardar el cambio en Supabase.";
     console.error(error);

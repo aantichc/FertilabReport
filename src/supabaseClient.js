@@ -105,4 +105,22 @@ export const supabaseClient = {
   async listEmailLog() {
     return request("email_log?select=*&order=created_at.desc&limit=5");
   },
+
+  async listCalendarNotes() {
+    return request("calendar_notes?select=*&order=note_date.asc,created_at.asc");
+  },
+
+  async createCalendarNote(note) {
+    const rows = await request("calendar_notes", {
+      method: "POST",
+      body: JSON.stringify(note),
+    });
+    return rows[0];
+  },
+
+  async deleteCalendarNote(id) {
+    return request(`calendar_notes?id=eq.${encode(id)}`, {
+      method: "DELETE",
+    });
+  },
 };
