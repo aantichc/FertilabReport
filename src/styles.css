@@ -562,6 +562,11 @@ dd {
   border-radius: 8px;
 }
 
+.calendar-grid.week .calendar-cell {
+  max-height: 560px;
+  overflow: hidden;
+}
+
 .calendar-grid.day .calendar-cell {
   min-height: 360px;
 }
@@ -593,6 +598,9 @@ dd {
   display: grid;
   gap: 8px;
   min-width: 0;
+  max-height: 490px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .year-grid {
@@ -654,9 +662,7 @@ dd {
 }
 
 .calendar-event {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 14px;
+  display: block;
   width: 100%;
   padding: 10px;
   text-align: left;
@@ -669,9 +675,16 @@ dd {
 }
 
 .calendar-event-time {
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 7px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
   font-weight: 800;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
 }
 
 .calendar-event-body {
@@ -681,8 +694,10 @@ dd {
 }
 
 .calendar-event-head {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .calendar-event-head strong,
@@ -691,10 +706,22 @@ dd {
   word-break: break-word;
 }
 
+.calendar-event-head strong {
+  display: -webkit-box;
+  flex-basis: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .calendar-event p {
   margin: 0;
   color: #314254;
   white-space: pre-wrap;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .compact-transition {
@@ -705,6 +732,7 @@ dd {
   position: relative;
   border-color: #cbd5e1;
   background: #f8fafc;
+  padding-right: 54px;
 }
 
 .note-delete {

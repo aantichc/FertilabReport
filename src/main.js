@@ -607,9 +607,9 @@ function renderCalendarEvent(event) {
   if (event.kind === "note") {
     return `
       <div class="calendar-event note-event">
-        <div class="calendar-event-time">Nota</div>
         <div class="calendar-event-body">
           <div class="calendar-event-head">
+            <span class="calendar-event-time">Nota</span>
             <span class="event-type">Nota planificada</span>
             <strong>${escapeHtml(event.title)}</strong>
           </div>
@@ -628,9 +628,9 @@ function renderCalendarEvent(event) {
 
   return `
     <button class="calendar-event" data-calendar-report="${event.reportId}">
-      <div class="calendar-event-time">${formatTime(event.createdAt)}</div>
       <div class="calendar-event-body">
         <div class="calendar-event-head">
+          <span class="calendar-event-time">${formatTime(event.createdAt)}</span>
           <span class="event-type">${escapeHtml(eventLabel(event.type))}</span>
           <strong>${escapeHtml(event.reportTitle)}</strong>
         </div>
