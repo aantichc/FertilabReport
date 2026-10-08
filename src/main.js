@@ -8,6 +8,7 @@ const state = {
   filter: "ALL",
   sortBy: "updatedAt",
   selectedReportId: null,
+  activeUser: storage.getActiveUser(),
 };
 
 const app = document.querySelector("#app");
@@ -53,6 +54,15 @@ function getSelectedReport() {
   return reports.find((report) => report.id === state.selectedReportId) ?? reports[0] ?? null;
 }
 
+function hasActiveUser() {
+  return Boolean(state.activeUser.trim());
+}
+
+function setActiveUser(name) {
+  state.activeUser = name.trim();
+  storage.saveActiveUser(state.activeUser);
+}
+
 function renderShell(content) {
   app.innerHTML = `
     <div class="layout">
@@ -70,7 +80,16 @@ function renderShell(content) {
           <button class="${state.section === "settings" ? "active" : ""}" data-section="settings">Correos de notificación</button>
         </nav>
       </aside>
-      <main class="main">${content}</main>
+      <main class="main">
+        <div class="user-bar">
+          <div>
+            <span>Usuario activo</span>
+            <strong>${hasActiveUser() ? escapeHtml(state.activeUser) : "Sin identificar"}</strong>
+          </div>
+          <button data-change-user>${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
+        </div>
+        ${content}
+      </main>
     </div>
   `;
 
@@ -79,6 +98,9 @@ function renderShell(content) {
       state.section = button.dataset.section;
       render();
     });
+  });
+  document.querySelector("[data-change-user]").addEventListener("click", () => {
+    openUserDialog();
   });
 }
 
@@ -207,6 +229,7 @@ function renderHistoryEntry(entry) {
           <strong>${label}</strong>
           <time>${formatDate(entry.createdAt)}</time>
         </div>
+        <div class="actor">Por ${escapeHtml(entry.user || "Usuario sin identificar")}</div>
         ${transition}
         ${entry.content ? `<p>${escapeHtml(entry.content)}</p>` : `<p class="muted">Sin comentario adicional.</p>`}
       </div>
@@ -220,15 +243,17 @@ function bindDetailActions() {
 
   document.querySelector("#status-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
-    reportService.changeStatus(report.id, form.get("status"), form.get("comment") ?? "");
+    reportService.changeStatus(report.id, form.get("status"), form.get("comment") ?? "", state.activeUser);
     render();
   });
 
   document.querySelector("#update-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
-    reportService.addUpdate(report.id, form.get("content"));
+    reportService.addUpdate(report.id, form.get("content"), state.activeUser);
     render();
   });
 
@@ -270,10 +295,12 @@ function renderCreate() {
   document.querySelector("#create-report-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    if (!ensureActiveUser()) return;
     const report = reportService.createReport({
       title: form.get("title"),
       content: form.get("content"),
       status: form.get("status"),
+      user: state.activeUser,
     });
     state.selectedReportId = report.id;
     state.section = "reports";
@@ -346,10 +373,58 @@ function renderRecipient(recipient) {
   `;
 }
 
+function openUserDialog() {
+  const name = window.prompt("Indica tu nombre para registrar tus acciones", state.activeUser);
+  if (!name || !name.trim()) return false;
+  setActiveUser(name);
+  render();
+  return true;
+}
+
+function ensureActiveUser() {
+  if (hasActiveUser()) return true;
+  return openUserDialog();
+}
+
 function render() {
+  if (!hasActiveUser()) {
+    renderUserGate();
+    return;
+  }
   if (state.section === "create") renderCreate();
   else if (state.section === "settings") renderSettings();
   else renderReports();
+}
+
+function renderUserGate() {
+  app.innerHTML = `
+    <main class="entry-screen">
+      <form class="entry-card" id="user-entry-form">
+        <div class="brand compact">
+          <div class="brand-mark">F</div>
+          <div>
+            <strong>Fertilab</strong>
+            <span>Gestión de partes</span>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Identificación</p>
+          <h1>¿Quién está usando la app?</h1>
+        </div>
+        <label>Tu nombre
+          <input name="name" required autocomplete="name" placeholder="Ej. Alan" autofocus />
+        </label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </main>
+  `;
+
+  document.querySelector("#user-entry-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setActiveUser(form.get("name"));
+    render();
+  });
 }
 
 reportService.seedIfEmpty();

@@ -18,7 +18,7 @@ export const reportService = {
     return normalizeReports(storage.getReports());
   },
 
-  createReport({ title, content, status }) {
+  createReport({ title, content, status, user }) {
     const timestamp = nowIso();
     const report = {
       id: crypto.randomUUID(),
@@ -35,7 +35,7 @@ export const reportService = {
           previousStatus: null,
           newStatus: status,
           createdAt: timestamp,
-          user: null,
+          user: user?.trim() || null,
         },
       ],
     };
@@ -46,7 +46,7 @@ export const reportService = {
     return report;
   },
 
-  addUpdate(reportId, content) {
+  addUpdate(reportId, content, user) {
     const timestamp = nowIso();
     const reports = this.getReports().map((report) => {
       if (report.id !== reportId) return report;
@@ -63,7 +63,7 @@ export const reportService = {
             previousStatus: null,
             newStatus: report.currentStatus,
             createdAt: timestamp,
-            user: null,
+            user: user?.trim() || null,
           },
         ],
       };
@@ -71,7 +71,7 @@ export const reportService = {
     storage.saveReports(reports);
   },
 
-  changeStatus(reportId, newStatus, comment) {
+  changeStatus(reportId, newStatus, comment, user) {
     const timestamp = nowIso();
     const reports = this.getReports().map((report) => {
       if (report.id !== reportId || report.currentStatus === newStatus) return report;
@@ -89,7 +89,7 @@ export const reportService = {
             previousStatus: report.currentStatus,
             newStatus,
             createdAt: timestamp,
-            user: null,
+            user: user?.trim() || null,
           },
         ],
       };
@@ -125,7 +125,7 @@ export const reportService = {
             previousStatus: null,
             newStatus: ReportStatus.RED,
             createdAt: publishedAt,
-            user: null,
+            user: "Sistema",
           },
         ],
       },

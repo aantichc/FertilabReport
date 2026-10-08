@@ -1,6 +1,7 @@
 const REPORTS_KEY = "fertilab.reports.v1";
 const RECIPIENTS_KEY = "fertilab.notificationRecipients.v1";
 const EMAIL_LOG_KEY = "fertilab.emailLog.v1";
+const ACTIVE_USER_KEY = "fertilab.activeUser.v1";
 
 function readJson(key, fallback) {
   try {
@@ -39,5 +40,13 @@ export const storage = {
   appendEmailLog(entry) {
     const log = readJson(EMAIL_LOG_KEY, []);
     writeJson(EMAIL_LOG_KEY, [entry, ...log]);
+  },
+
+  getActiveUser() {
+    return readJson(ACTIVE_USER_KEY, "");
+  },
+
+  saveActiveUser(name) {
+    writeJson(ACTIVE_USER_KEY, name.trim());
   },
 };
