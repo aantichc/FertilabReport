@@ -53,11 +53,38 @@ create table if not exists public.calendar_notes (
   created_by text
 );
 
+create table if not exists public.preventive_tasks (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  content text,
+  category text not null default 'IT' check (category in ('IT', 'INSTALLATIONS', 'PURCHASES')),
+  start_date date not null,
+  repeat_enabled boolean not null default false,
+  repeat_every_count integer not null default 1 check (repeat_every_count > 0),
+  repeat_every_unit text not null default 'weeks' check (repeat_every_unit in ('days', 'weeks', 'months')),
+  notify_enabled boolean not null default false,
+  notify_lead_count integer not null default 1 check (notify_lead_count >= 0),
+  notify_lead_unit text not null default 'days' check (notify_lead_unit in ('days', 'weeks')),
+  created_at timestamptz not null default now(),
+  created_by text
+);
+
+create table if not exists public.preventive_notification_log (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references public.preventive_tasks(id) on delete cascade,
+  occurrence_date date not null,
+  recipients text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  unique (task_id, occurrence_date)
+);
+
 alter table public.reports enable row level security;
 alter table public.report_history enable row level security;
 alter table public.notification_recipients enable row level security;
 alter table public.email_log enable row level security;
 alter table public.calendar_notes enable row level security;
+alter table public.preventive_tasks enable row level security;
+alter table public.preventive_notification_log enable row level security;
 
 drop policy if exists "Public read reports" on public.reports;
 drop policy if exists "Public insert reports" on public.reports;
@@ -99,6 +126,20 @@ create policy "Public read calendar notes" on public.calendar_notes for select u
 create policy "Public insert calendar notes" on public.calendar_notes for insert with check (true);
 create policy "Public delete calendar notes" on public.calendar_notes for delete using (true);
 
+drop policy if exists "Public read preventive tasks" on public.preventive_tasks;
+drop policy if exists "Public insert preventive tasks" on public.preventive_tasks;
+drop policy if exists "Public delete preventive tasks" on public.preventive_tasks;
+
+create policy "Public read preventive tasks" on public.preventive_tasks for select using (true);
+create policy "Public insert preventive tasks" on public.preventive_tasks for insert with check (true);
+create policy "Public delete preventive tasks" on public.preventive_tasks for delete using (true);
+
+drop policy if exists "Public read preventive notification log" on public.preventive_notification_log;
+drop policy if exists "Public insert preventive notification log" on public.preventive_notification_log;
+
+create policy "Public read preventive notification log" on public.preventive_notification_log for select using (true);
+create policy "Public insert preventive notification log" on public.preventive_notification_log for insert with check (true);
+
 grant usage on schema public to anon;
 
 grant select, insert, update, delete on public.reports to anon;
@@ -106,3 +147,5 @@ grant select, insert on public.report_history to anon;
 grant select, insert, update, delete on public.notification_recipients to anon;
 grant select, insert on public.email_log to anon;
 grant select, insert, delete on public.calendar_notes to anon;
+grant select, insert, delete on public.preventive_tasks to anon;
+grant select, insert on public.preventive_notification_log to anon;

@@ -20,6 +20,7 @@ const state = {
   recipients: [],
   emailLog: [],
   calendarNotes: [],
+  preventiveTasks: [],
   calendarMode: "month",
   calendarDate: new Date(),
   selectedCalendarNoteId: null,
@@ -186,6 +187,24 @@ function normalizeCalendarNotes(notes) {
     noteDate: note.note_date,
     createdAt: note.created_at,
     createdBy: note.created_by,
+  }));
+}
+
+function normalizePreventiveTasks(tasks) {
+  return tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    content: task.content ?? "",
+    category: task.category ?? ReportCategory.IT,
+    startDate: task.start_date,
+    repeatEnabled: Boolean(task.repeat_enabled),
+    repeatEveryCount: task.repeat_every_count ?? 1,
+    repeatEveryUnit: task.repeat_every_unit ?? "weeks",
+    notifyEnabled: Boolean(task.notify_enabled),
+    notifyLeadCount: task.notify_lead_count ?? 1,
+    notifyLeadUnit: task.notify_lead_unit ?? "days",
+    createdAt: task.created_at,
+    createdBy: task.created_by,
   }));
 }
 
@@ -433,7 +452,65 @@ function buildCalendarEvents() {
     noteDate: note.noteDate,
   }));
 
-  return [...reportEvents, ...noteEvents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const preventiveEvents = buildPreventiveEvents(calendarRangeStart(), calendarRangeEnd());
+
+  return [...reportEvents, ...noteEvents, ...preventiveEvents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+function calendarRangeStart() {
+  if (state.calendarMode === "year") return new Date(state.calendarDate.getFullYear(), 0, 1);
+  if (state.calendarMode === "month") return startOfWeek(startOfMonth(state.calendarDate));
+  if (state.calendarMode === "week") return startOfWeek(state.calendarDate);
+  return new Date(state.calendarDate);
+}
+
+function calendarRangeEnd() {
+  if (state.calendarMode === "year") return new Date(state.calendarDate.getFullYear(), 11, 31);
+  if (state.calendarMode === "month") return addDays(startOfWeek(endOfMonth(state.calendarDate)), 6);
+  if (state.calendarMode === "week") return addDays(startOfWeek(state.calendarDate), 6);
+  return new Date(state.calendarDate);
+}
+
+function addInterval(date, count, unit) {
+  const next = new Date(date);
+  if (unit === "days") next.setDate(next.getDate() + count);
+  if (unit === "weeks") next.setDate(next.getDate() + count * 7);
+  if (unit === "months") next.setMonth(next.getMonth() + count);
+  return next;
+}
+
+function buildPreventiveEvents(rangeStart, rangeEnd) {
+  return state.preventiveTasks
+    .filter(matchesCategoryFilter)
+    .flatMap((task) => {
+      const events = [];
+      let occurrence = new Date(`${task.startDate}T12:00:00`);
+      const firstDate = new Date(occurrence);
+      const maxIterations = task.repeatEnabled ? 400 : 1;
+
+      for (let index = 0; index < maxIterations && occurrence <= rangeEnd; index += 1) {
+        if (occurrence >= rangeStart) {
+          events.push({
+            id: `${task.id}-${dateKey(occurrence)}`,
+            kind: "preventive",
+            taskId: task.id,
+            title: task.title,
+            content: task.content,
+            category: task.category,
+            createdBy: task.createdBy,
+            createdAt: `${dateKey(occurrence)}T09:00:00`,
+            occurrenceDate: dateKey(occurrence),
+            repeatEnabled: task.repeatEnabled,
+            notifyEnabled: task.notifyEnabled,
+          });
+        }
+        if (!task.repeatEnabled) break;
+        occurrence = addInterval(occurrence, task.repeatEveryCount, task.repeatEveryUnit);
+        if (occurrence <= firstDate) break;
+      }
+
+      return events;
+    });
 }
 
 function eventLabel(type) {
@@ -479,6 +556,7 @@ function renderCalendar() {
       </div>
     </section>
     ${renderCalendarNoteForm()}
+    ${renderPreventiveForm()}
     ${renderSelectedCalendarNote()}
     ${renderCalendarGrid(events)}
   `);
@@ -528,12 +606,41 @@ function renderCalendar() {
       }),
     );
   });
+  document.querySelector("#preventive-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!ensureActiveUser()) return;
+    const form = new FormData(event.currentTarget);
+    withReload(() =>
+      supabaseClient.createPreventiveTask({
+        id: crypto.randomUUID(),
+        title: String(form.get("title")).trim(),
+        content: String(form.get("content") ?? "").trim(),
+        category: form.get("category"),
+        start_date: form.get("startDate"),
+        repeat_enabled: form.get("repeatEnabled") === "yes",
+        repeat_every_count: Number(form.get("repeatEveryCount") || 1),
+        repeat_every_unit: form.get("repeatEveryUnit"),
+        notify_enabled: form.get("notifyEnabled") === "yes",
+        notify_lead_count: Number(form.get("notifyLeadCount") || 0),
+        notify_lead_unit: form.get("notifyLeadUnit"),
+        created_by: state.activeUser,
+      }),
+    );
+  });
   document.querySelectorAll("[data-delete-note]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       const confirmed = window.confirm("¿Eliminar esta nota del calendario?");
       if (!confirmed) return;
       withReload(() => supabaseClient.deleteCalendarNote(button.dataset.deleteNote));
+    });
+  });
+  document.querySelectorAll("[data-delete-preventive]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const confirmed = window.confirm("¿Eliminar este preventivo y todas sus repeticiones vinculadas?");
+      if (!confirmed) return;
+      withReload(() => supabaseClient.deletePreventiveTask(button.dataset.deletePreventive));
     });
   });
   document.querySelectorAll("[data-select-note]").forEach((button) => {
@@ -607,6 +714,61 @@ function renderCalendarNoteForm() {
         <input name="content" placeholder="Información adicional" />
       </label>
       <button type="submit">Guardar nota</button>
+    </form>
+  `;
+}
+
+function renderPreventiveForm() {
+  return `
+    <form class="preventive-form" id="preventive-form">
+      <div class="form-heading">
+        <div>
+          <span class="eyebrow">Preventivos</span>
+          <strong>Planificar preventivo</strong>
+        </div>
+      </div>
+      <label>Fecha
+        <input type="date" name="startDate" required value="${dateKey(state.calendarDate)}" />
+      </label>
+      <label>Clase
+        <select name="category" required>
+          ${categories.map((category) => `<option value="${category}">${CategoryMeta[category].label}</option>`).join("")}
+        </select>
+      </label>
+      <label>Título
+        <input name="title" required maxlength="120" placeholder="Ej. Revisión incubadora" />
+      </label>
+      <label>Detalle
+        <input name="content" placeholder="Información adicional" />
+      </label>
+      <label class="check-field">
+        <input name="repeatEnabled" type="checkbox" value="yes" />
+        <span>Repetir</span>
+      </label>
+      <label>Cada
+        <input name="repeatEveryCount" type="number" min="1" value="1" />
+      </label>
+      <label>Periodo
+        <select name="repeatEveryUnit">
+          <option value="days">Días</option>
+          <option value="weeks" selected>Semanas</option>
+          <option value="months">Meses</option>
+        </select>
+      </label>
+      <label class="check-field">
+        <input name="notifyEnabled" type="checkbox" value="yes" />
+        <span>Avisar por correo</span>
+      </label>
+      <label>Antelación
+        <input name="notifyLeadCount" type="number" min="0" value="1" />
+      </label>
+      <label>Unidad
+        <select name="notifyLeadUnit">
+          <option value="days" selected>Días antes</option>
+          <option value="weeks">Semanas antes</option>
+        </select>
+      </label>
+      <button type="submit">Guardar preventivo</button>
     </form>
   `;
 }
@@ -717,6 +879,23 @@ function renderCalendarDay(key, events) {
 }
 
 function renderCalendarEvent(event) {
+  if (event.kind === "preventive") {
+    return `
+      <div class="calendar-event preventive-event">
+        <div class="calendar-event-body">
+          <div class="calendar-event-head">
+            <span class="calendar-event-time preventive-icon">P</span>
+            <strong>${escapeHtml(event.title)}</strong>
+          </div>
+          <div class="card-tags">${categoryBadge(event.category)}${event.repeatEnabled ? `<span class="category-badge">Recurrente</span>` : ""}${event.notifyEnabled ? `<span class="category-badge teal">Aviso email</span>` : ""}</div>
+          ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
+          <span class="actor">Por ${escapeHtml(event.createdBy || "Usuario sin identificar")}</span>
+        </div>
+        <button class="danger subtle note-delete" data-delete-preventive="${event.taskId}" type="button">Eliminar bloque</button>
+      </div>
+    `;
+  }
+
   if (event.kind === "note") {
     return `
       <div class="calendar-event note-event">
@@ -756,6 +935,16 @@ function renderCalendarEvent(event) {
 }
 
 function renderCalendarMonthEvent(event) {
+  if (event.kind === "preventive") {
+    return `
+      <div class="month-event preventive-month-event">
+        <span class="preventive-icon">P</span>
+        <strong>${escapeHtml(event.title)}</strong>
+        <button class="danger subtle compact-delete" data-delete-preventive="${event.taskId}" type="button">Eliminar</button>
+      </div>
+    `;
+  }
+
   if (event.kind === "note") {
     return `
       <button class="month-event note-month-event" data-select-note="${event.id}" type="button">
@@ -775,6 +964,20 @@ function renderCalendarMonthEvent(event) {
 }
 
 function renderCalendarWeekEvent(event) {
+  if (event.kind === "preventive") {
+    return `
+      <div class="week-event preventive-week-event">
+        <div class="week-event-title">
+          <span class="calendar-event-time preventive-icon">P</span>
+          <strong>${escapeHtml(event.title)}</strong>
+        </div>
+        <span class="week-event-status">${escapeHtml(CategoryMeta[event.category ?? ReportCategory.IT].label)}${event.repeatEnabled ? " · Recurrente" : ""}</span>
+        ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
+        <button class="danger subtle week-note-delete" data-delete-preventive="${event.taskId}" type="button">Eliminar bloque</button>
+      </div>
+    `;
+  }
+
   if (event.kind === "note") {
     return `
       <div class="week-event note-week-event">
@@ -949,16 +1152,18 @@ async function loadSharedData() {
   render();
 
   try {
-    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
       supabaseClient.listCalendarNotes(),
+      supabaseClient.listPreventiveTasks(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
     state.calendarNotes = normalizeCalendarNotes(calendarNotes);
+    state.preventiveTasks = normalizePreventiveTasks(preventiveTasks);
   } catch (error) {
     state.error = "No se han podido cargar los datos compartidos. Revisa que las tablas de Supabase estén creadas.";
     console.error(error);
@@ -977,16 +1182,18 @@ async function refreshSharedData({ silent = true } = {}) {
   if (!silent) render();
 
   try {
-    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
       supabaseClient.listCalendarNotes(),
+      supabaseClient.listPreventiveTasks(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
     state.calendarNotes = normalizeCalendarNotes(calendarNotes);
+    state.preventiveTasks = normalizePreventiveTasks(preventiveTasks);
     state.error = "";
   } catch (error) {
     state.error = "No se han podido refrescar los datos compartidos.";
@@ -1004,16 +1211,18 @@ async function withReload(action) {
 
   try {
     await action();
-    const [reports, recipients, emailLog, calendarNotes] = await Promise.all([
+    const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
       supabaseClient.listEmailLog(),
       supabaseClient.listCalendarNotes(),
+      supabaseClient.listPreventiveTasks(),
     ]);
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
     state.calendarNotes = normalizeCalendarNotes(calendarNotes);
+    state.preventiveTasks = normalizePreventiveTasks(preventiveTasks);
   } catch (error) {
     state.error = "No se ha podido guardar el cambio en Supabase.";
     console.error(error);

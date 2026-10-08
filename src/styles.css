@@ -601,7 +601,8 @@ dd {
   color: #fff;
 }
 
-.calendar-note-form {
+.calendar-note-form,
+.preventive-form {
   display: grid;
   grid-template-columns: 170px minmax(180px, 1fr) minmax(180px, 1fr) auto;
   gap: 12px;
@@ -612,6 +613,20 @@ dd {
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.preventive-form {
+  grid-template-columns: 170px 160px minmax(180px, 1fr) minmax(180px, 1fr) auto auto 150px auto auto 150px auto;
+}
+
+.form-heading {
+  display: grid;
+  align-content: end;
+}
+
+.form-heading strong {
+  display: block;
+  white-space: nowrap;
 }
 
 .note-detail {
@@ -1042,7 +1057,18 @@ dd {
   padding-right: 54px;
 }
 
+.preventive-event {
+  position: relative;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  padding-right: 118px;
+}
+
 .note-event .calendar-event-head {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.preventive-event .calendar-event-head {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
@@ -1053,6 +1079,36 @@ dd {
   min-height: 30px;
   padding: 0 8px;
   font-size: 0.78rem;
+}
+
+.preventive-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #fff;
+  background: #2563eb;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.preventive-month-event,
+.preventive-week-event {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+.preventive-month-event {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.compact-delete {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 0.72rem;
 }
 
 .entry-screen {
@@ -1088,6 +1144,7 @@ dd {
   .workbench,
   .calendar-day,
   .calendar-note-form,
+  .preventive-form,
   .settings-grid {
     grid-template-columns: 1fr;
   }

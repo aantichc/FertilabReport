@@ -110,6 +110,10 @@ export const supabaseClient = {
     return request("calendar_notes?select=*&order=note_date.asc,created_at.asc");
   },
 
+  async listPreventiveTasks() {
+    return request("preventive_tasks?select=*&order=start_date.asc,created_at.asc");
+  },
+
   async createCalendarNote(note) {
     const rows = await request("calendar_notes", {
       method: "POST",
@@ -120,6 +124,20 @@ export const supabaseClient = {
 
   async deleteCalendarNote(id) {
     return request(`calendar_notes?id=eq.${encode(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  async createPreventiveTask(task) {
+    const rows = await request("preventive_tasks", {
+      method: "POST",
+      body: JSON.stringify(task),
+    });
+    return rows[0];
+  },
+
+  async deletePreventiveTask(id) {
+    return request(`preventive_tasks?id=eq.${encode(id)}`, {
       method: "DELETE",
     });
   },
