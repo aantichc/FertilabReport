@@ -1,4 +1,4 @@
-const RESEND_API_URL = "https://api.resend.com/emails";
+import nodemailer from "nodemailer";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -43,8 +43,8 @@ export default async function handler(request, response) {
     return;
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    response.status(500).json({ error: "RESEND_API_KEY is not configured" });
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    response.status(500).json({ error: "Gmail SMTP is not configured" });
     return;
   }
 
@@ -59,29 +59,23 @@ export default async function handler(request, response) {
       return;
     }
 
-    const from = process.env.EMAIL_FROM || "Fertilab Reports <onboarding@resend.dev>";
-    const resendResponse = await fetch(RESEND_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
       },
-      body: JSON.stringify({
-        from,
-        to: recipientEmails,
-        subject: `Nuevo parte: ${report.title}`,
-        html: buildEmailHtml(report),
-      }),
     });
 
-    const data = await resendResponse.json();
+    const from = process.env.EMAIL_FROM || `Fertilab Alertas <${process.env.GMAIL_USER}>`;
+    const result = await transporter.sendMail({
+      from,
+      to: recipientEmails,
+      subject: `Nuevo parte: ${report.title}`,
+      html: buildEmailHtml(report),
+    });
 
-    if (!resendResponse.ok) {
-      response.status(resendResponse.status).json(data);
-      return;
-    }
-
-    response.status(200).json({ ok: true, id: data.id });
+    response.status(200).json({ ok: true, id: result.messageId });
   } catch (error) {
     response.status(500).json({ error: error.message || "Unexpected email error" });
   }
