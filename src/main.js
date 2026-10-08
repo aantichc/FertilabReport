@@ -391,6 +391,10 @@ function eventLabel(type) {
   return "Actualización";
 }
 
+function noteIcon() {
+  return "📝";
+}
+
 function renderCalendar() {
   if (state.loading) {
     renderShell(`<div class="empty">Cargando calendario...</div>`);
@@ -554,7 +558,7 @@ function renderSelectedCalendarNote() {
   return `
     <section class="note-detail">
       <div>
-        <span>Nota · ${escapeHtml(formatDay(`${note.noteDate}T12:00:00`))}</span>
+        <span>${noteIcon()} · ${escapeHtml(formatDay(`${note.noteDate}T12:00:00`))}</span>
         <h2>${escapeHtml(note.title)}</h2>
         ${note.content ? `<p>${escapeHtml(note.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
         <small>Creada por ${escapeHtml(note.createdBy || "Usuario sin identificar")}</small>
@@ -658,7 +662,7 @@ function renderCalendarEvent(event) {
       <div class="calendar-event note-event">
         <div class="calendar-event-body">
           <div class="calendar-event-head">
-            <span class="calendar-event-time">Nota</span>
+            <span class="calendar-event-time note-icon">${noteIcon()}</span>
             <strong>${escapeHtml(event.title)}</strong>
           </div>
           ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin detalle adicional.</p>`}
@@ -695,7 +699,7 @@ function renderCalendarMonthEvent(event) {
   if (event.kind === "note") {
     return `
       <button class="month-event note-month-event" data-select-note="${event.id}" type="button">
-        <span>Nota</span>
+        <span class="note-icon">${noteIcon()}</span>
         <strong>${escapeHtml(event.title)}</strong>
       </button>
     `;
@@ -715,7 +719,7 @@ function renderCalendarWeekEvent(event) {
     return `
       <div class="week-event note-week-event">
         <div class="week-event-title">
-          <span class="calendar-event-time">Nota</span>
+          <span class="calendar-event-time note-icon">${noteIcon()}</span>
           <strong>${escapeHtml(event.title)}</strong>
         </div>
         ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
