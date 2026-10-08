@@ -2,6 +2,7 @@ const REPORTS_KEY = "fertilab.reports.v1";
 const RECIPIENTS_KEY = "fertilab.notificationRecipients.v1";
 const EMAIL_LOG_KEY = "fertilab.emailLog.v1";
 const ACTIVE_USER_KEY = "fertilab.activeUser.v1";
+const ACCESS_GRANTED_KEY = "fertilab.accessGranted.v1";
 
 function readJson(key, fallback) {
   try {
@@ -48,5 +49,13 @@ export const storage = {
 
   saveActiveUser(name) {
     writeJson(ACTIVE_USER_KEY, name.trim());
+  },
+
+  hasAccessGranted() {
+    return readJson(ACCESS_GRANTED_KEY, false) === true;
+  },
+
+  saveAccessGranted(granted) {
+    writeJson(ACCESS_GRANTED_KEY, Boolean(granted));
   },
 };

@@ -4,12 +4,15 @@ import { reportService } from "./reportService.js";
 import { storage } from "./storage.js";
 import { supabaseClient } from "./supabaseClient.js";
 
+const ACCESS_KEY = "fertilab";
+
 const state = {
   section: "reports",
   filter: "ALL",
   sortBy: "updatedAt",
   selectedReportId: null,
   activeUser: storage.getActiveUser(),
+  accessGranted: storage.hasAccessGranted(),
   reports: [],
   recipients: [],
   emailLog: [],
@@ -63,9 +66,18 @@ function hasActiveUser() {
   return Boolean(state.activeUser.trim());
 }
 
+function hasAccessGranted() {
+  return state.accessGranted === true;
+}
+
 function setActiveUser(name) {
   state.activeUser = name.trim();
   storage.saveActiveUser(state.activeUser);
+}
+
+function setAccessGranted(granted) {
+  state.accessGranted = Boolean(granted);
+  storage.saveAccessGranted(state.accessGranted);
 }
 
 function normalizeEmailLog(log) {
@@ -103,6 +115,7 @@ function renderShell(content) {
             <strong>${hasActiveUser() ? escapeHtml(state.activeUser) : "Sin identificar"}</strong>
           </div>
           <button data-change-user>${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
+          <button class="subtle" data-lock-access>Salir</button>
         </div>
         ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
         ${content}
@@ -118,6 +131,10 @@ function renderShell(content) {
   });
   document.querySelector("[data-change-user]").addEventListener("click", () => {
     openUserDialog();
+  });
+  document.querySelector("[data-lock-access]").addEventListener("click", () => {
+    setAccessGranted(false);
+    render();
   });
 }
 
@@ -391,7 +408,7 @@ function renderRecipient(recipient) {
 }
 
 async function loadSharedData() {
-  if (!hasActiveUser()) return;
+  if (!hasAccessGranted() || !hasActiveUser()) return;
   state.loading = true;
   state.error = "";
   render();
@@ -453,6 +470,11 @@ function ensureActiveUser() {
 }
 
 function render() {
+  if (!hasAccessGranted()) {
+    renderAccessGate();
+    return;
+  }
+
   if (!hasActiveUser()) {
     renderUserGate();
     return;
@@ -460,6 +482,48 @@ function render() {
   if (state.section === "create") renderCreate();
   else if (state.section === "settings") renderSettings();
   else renderReports();
+}
+
+function renderAccessGate() {
+  app.innerHTML = `
+    <main class="entry-screen">
+      <form class="entry-card" id="access-entry-form">
+        <div class="brand compact">
+          <div class="brand-mark">F</div>
+          <div>
+            <strong>Fertilab</strong>
+            <span>Gestión de partes</span>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Acceso</p>
+          <h1>Introduce la clave</h1>
+        </div>
+        ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
+        <label>Clave de acceso
+          <input name="accessKey" type="password" required autocomplete="current-password" autofocus />
+        </label>
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </main>
+  `;
+
+  document.querySelector("#access-entry-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const submittedKey = String(form.get("accessKey") ?? "").trim();
+
+    if (submittedKey !== ACCESS_KEY) {
+      state.error = "Clave de acceso incorrecta.";
+      renderAccessGate();
+      return;
+    }
+
+    state.error = "";
+    setAccessGranted(true);
+    render();
+    loadSharedData();
+  });
 }
 
 function renderUserGate() {
