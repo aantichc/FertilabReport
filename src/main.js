@@ -407,16 +407,16 @@ function renderReportDetail(report) {
         <div><dt>Publicado</dt><dd>${formatDate(report.publishedAt)}</dd></div>
         <div><dt>Última actualización</dt><dd>${formatDate(report.updatedAt)}</dd></div>
       </dl>
-      <form class="inline-form" id="status-form">
-        <label>Cambiar estado
+      <form class="stack-form" id="progress-form">
+        <label>Estado
           <select name="status">
             ${statuses.map((status) => `<option value="${status}" ${status === report.currentStatus ? "selected" : ""}>${StatusMeta[status].label}</option>`).join("")}
           </select>
         </label>
-        <label>Comentario opcional
-          <input name="comment" placeholder="Motivo del cambio" />
+        <label>Actualización opcional
+          <textarea name="content" rows="4" placeholder="Describe la actualización o el motivo del cambio de estado"></textarea>
         </label>
-        <button type="submit">Guardar estado</button>
+        <button type="submit">Guardar actualización</button>
       </form>
       <form class="inline-form" id="urgency-form">
         <label class="check-field">
@@ -424,12 +424,6 @@ function renderReportDetail(report) {
           <span>Marcar como urgente</span>
         </label>
         <button type="submit">Guardar urgencia</button>
-      </form>
-      <form class="stack-form" id="update-form">
-        <label>Añadir actualización
-          <textarea name="content" rows="4" required placeholder="Describe la nueva información sin sobrescribir el historial anterior"></textarea>
-        </label>
-        <button type="submit">Añadir al historial</button>
       </form>
       <section class="timeline">
         <div class="section-title">Historial</div>
@@ -1151,18 +1145,11 @@ function bindDetailActions() {
   const report = getSelectedReport();
   if (!report) return;
 
-  document.querySelector("#status-form")?.addEventListener("submit", (event) => {
+  document.querySelector("#progress-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!ensureActiveUser()) return;
     const form = new FormData(event.currentTarget);
-    withReload(() => reportService.changeStatus(report.id, form.get("status"), form.get("comment") ?? "", state.activeUser));
-  });
-
-  document.querySelector("#update-form")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    if (!ensureActiveUser()) return;
-    const form = new FormData(event.currentTarget);
-    withReload(() => reportService.addUpdate(report.id, form.get("content"), state.activeUser));
+    withReload(() => reportService.updateProgress(report.id, form.get("status"), form.get("content") ?? "", state.activeUser));
   });
 
   document.querySelector("#urgency-form")?.addEventListener("submit", (event) => {

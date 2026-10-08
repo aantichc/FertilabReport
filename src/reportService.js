@@ -83,6 +83,32 @@ export const reportService = {
     await supabaseClient.updateReport(reportId, { updated_at: timestamp });
   },
 
+  async updateProgress(reportId, newStatus, content, user) {
+    const timestamp = nowIso();
+    const report = (await this.getReports()).find((item) => item.id === reportId);
+    if (!report) return;
+
+    const trimmedContent = String(content ?? "").trim();
+    const statusChanged = report.currentStatus !== newStatus;
+    if (!statusChanged && !trimmedContent) return;
+
+    await supabaseClient.createHistoryEntry({
+      id: crypto.randomUUID(),
+      report_id: reportId,
+      type: statusChanged ? HistoryEntryType.STATUS_CHANGE : HistoryEntryType.UPDATE,
+      content: trimmedContent,
+      previous_status: statusChanged ? report.currentStatus : null,
+      new_status: newStatus,
+      created_at: timestamp,
+      user_name: user?.trim() || null,
+    });
+
+    await supabaseClient.updateReport(reportId, {
+      current_status: newStatus,
+      updated_at: timestamp,
+    });
+  },
+
   async changeStatus(reportId, newStatus, comment, user) {
     const timestamp = nowIso();
     const report = (await this.getReports()).find((item) => item.id === reportId);
