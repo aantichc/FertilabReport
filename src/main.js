@@ -578,8 +578,9 @@ function renderYearCalendar(events) {
 }
 
 function renderCalendarCell(date, events, isMuted) {
-  const isCompactCalendar = state.calendarMode === "month" || state.calendarMode === "week";
-  const visibleEvents = isCompactCalendar ? events.slice(0, 4) : events;
+  const isMonth = state.calendarMode === "month";
+  const isWeek = state.calendarMode === "week";
+  const visibleEvents = isMonth ? events.slice(0, 4) : isWeek ? events.slice(0, 5) : events;
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
 
   return `
@@ -591,7 +592,7 @@ function renderCalendarCell(date, events, isMuted) {
       <div class="calendar-cell-events">
         ${
           visibleEvents.length
-            ? visibleEvents.map(isCompactCalendar ? renderCalendarMonthEvent : renderCalendarEvent).join("")
+            ? visibleEvents.map(isMonth ? renderCalendarMonthEvent : isWeek ? renderCalendarWeekEvent : renderCalendarEvent).join("")
             : `<span class="muted">Sin movimientos</span>`
         }
         ${hiddenCount ? `<button class="more-events" data-calendar-day="${dateKey(date)}">+${hiddenCount} más</button>` : ""}
@@ -673,6 +674,31 @@ function renderCalendarMonthEvent(event) {
       ${statusDot(event.newStatus || event.reportStatus)}
       <strong>${escapeHtml(event.reportTitle)}</strong>
       <small>${escapeHtml(StatusMeta[event.newStatus || event.reportStatus].label)}</small>
+    </button>
+  `;
+}
+
+function renderCalendarWeekEvent(event) {
+  if (event.kind === "note") {
+    return `
+      <div class="week-event note-week-event">
+        <div class="week-event-title">
+          <span class="calendar-event-time">Nota</span>
+          <strong>${escapeHtml(event.title)}</strong>
+        </div>
+        ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  return `
+    <button class="week-event" data-calendar-report="${event.reportId}">
+      <div class="week-event-title">
+        ${statusDot(event.newStatus || event.reportStatus)}
+        <strong>${escapeHtml(event.reportTitle)}</strong>
+      </div>
+      <span class="week-event-status">${escapeHtml(StatusMeta[event.newStatus || event.reportStatus].label)}</span>
+      ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
     </button>
   `;
 }

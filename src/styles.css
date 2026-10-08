@@ -563,7 +563,8 @@ dd {
 }
 
 .calendar-grid.week .calendar-cell {
-  max-height: 560px;
+  min-height: 430px;
+  max-height: none;
   overflow: hidden;
 }
 
@@ -616,7 +617,68 @@ dd {
 }
 
 .calendar-grid.week .calendar-cell-events {
+  gap: 8px;
+  max-height: none;
+  overflow: hidden;
+}
+
+.week-event {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 58px;
+  padding: 9px;
+  text-align: left;
+  background: #f8fafc;
+  border-radius: 7px;
+}
+
+.week-event-title {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.note-week-event .week-event-title {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.week-event-title .status-dot {
+  width: 9px;
+  height: 9px;
+  min-width: 9px;
+}
+
+.week-event-title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+}
+
+.week-event-status {
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.week-event p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #314254;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-week-event {
+  border: 1px solid #e2e8f0;
 }
 
 .month-event {
