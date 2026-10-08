@@ -71,3 +71,10 @@ drop policy if exists "Public insert email log" on public.email_log;
 
 create policy "Public read email log" on public.email_log for select using (true);
 create policy "Public insert email log" on public.email_log for insert with check (true);
+
+grant usage on schema public to anon;
+
+grant select, insert, update, delete on public.reports to anon;
+grant select, insert on public.report_history to anon;
+grant select, insert, update, delete on public.notification_recipients to anon;
+grant select, insert on public.email_log to anon;
