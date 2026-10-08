@@ -5,3 +5,5 @@ build/
 .env.*
 .DS_Store
 Thumbs.db
+teams-app/
+Fertilab-Reports-Teams-App.zip
