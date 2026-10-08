@@ -33,6 +33,30 @@ function formatDate(iso) {
   return dateFormatter.format(new Date(iso));
 }
 
+function formatDay(iso) {
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+function formatTime(iso) {
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+function dayKey(iso) {
+  const date = new Date(iso);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -108,6 +132,7 @@ function renderShell(content) {
         <nav class="nav">
           <button class="${state.section === "reports" ? "active" : ""}" data-section="reports">Ver partes</button>
           <button class="${state.section === "create" ? "active" : ""}" data-section="create">Generar parte</button>
+          <button class="${state.section === "calendar" ? "active" : ""}" data-section="calendar">Calendario</button>
           <button class="${state.section === "settings" ? "active" : ""}" data-section="settings">Correos de notificación</button>
         </nav>
       </aside>
@@ -283,6 +308,108 @@ function renderHistoryEntry(entry) {
         ${entry.content ? `<p>${escapeHtml(entry.content)}</p>` : `<p class="muted">Sin comentario adicional.</p>`}
       </div>
     </article>
+  `;
+}
+
+function buildCalendarEvents() {
+  return state.reports
+    .flatMap((report) =>
+      report.history.map((entry) => ({
+        id: entry.id,
+        reportId: report.id,
+        reportTitle: report.title,
+        reportStatus: report.currentStatus,
+        type: entry.type,
+        content: entry.content,
+        previousStatus: entry.previousStatus,
+        newStatus: entry.newStatus,
+        user: entry.user,
+        createdAt: entry.createdAt,
+      })),
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+function eventLabel(type) {
+  if (type === HistoryEntryType.CREATED) return "Parte creado";
+  if (type === HistoryEntryType.STATUS_CHANGE) return "Cambio de estado";
+  return "Actualización";
+}
+
+function renderCalendar() {
+  if (state.loading) {
+    renderShell(`<div class="empty">Cargando calendario...</div>`);
+    return;
+  }
+
+  const events = buildCalendarEvents();
+  const grouped = events.reduce((groups, event) => {
+    const key = dayKey(event.createdAt);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(event);
+    return groups;
+  }, new Map());
+
+  renderShell(`
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Calendario</p>
+        <h1>Actividad por fecha</h1>
+      </div>
+    </header>
+    <section class="calendar-view">
+      ${
+        events.length
+          ? Array.from(grouped.entries())
+              .map(([key, dayEvents]) => renderCalendarDay(key, dayEvents))
+              .join("")
+          : `<div class="empty">No hay actividad registrada.</div>`
+      }
+    </section>
+  `);
+
+  document.querySelectorAll("[data-calendar-report]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedReportId = button.dataset.calendarReport;
+      state.section = "reports";
+      render();
+    });
+  });
+}
+
+function renderCalendarDay(key, events) {
+  return `
+    <article class="calendar-day">
+      <div class="calendar-date">
+        <strong>${escapeHtml(formatDay(`${key}T12:00:00`))}</strong>
+        <span>${events.length} movimiento(s)</span>
+      </div>
+      <div class="calendar-events">
+        ${events.map(renderCalendarEvent).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderCalendarEvent(event) {
+  const transition =
+    event.type === HistoryEntryType.STATUS_CHANGE
+      ? `<div class="transition compact-transition">${statusLabel(event.previousStatus)}<span>→</span>${statusLabel(event.newStatus)}</div>`
+      : `<div class="transition compact-transition">${statusLabel(event.newStatus)}</div>`;
+
+  return `
+    <button class="calendar-event" data-calendar-report="${event.reportId}">
+      <div class="calendar-event-time">${formatTime(event.createdAt)}</div>
+      <div class="calendar-event-body">
+        <div class="calendar-event-head">
+          <span class="event-type">${escapeHtml(eventLabel(event.type))}</span>
+          <strong>${escapeHtml(event.reportTitle)}</strong>
+        </div>
+        ${transition}
+        ${event.content ? `<p>${escapeHtml(event.content)}</p>` : `<p class="muted">Sin comentario adicional.</p>`}
+        <span class="actor">Por ${escapeHtml(event.user || "Usuario sin identificar")}</span>
+      </div>
+    </button>
   `;
 }
 
@@ -517,6 +644,7 @@ function render() {
     return;
   }
   if (state.section === "create") renderCreate();
+  else if (state.section === "calendar") renderCalendar();
   else if (state.section === "settings") renderSettings();
   else renderReports();
 }

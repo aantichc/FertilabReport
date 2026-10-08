@@ -498,6 +498,95 @@ dd {
   font-size: 0.9rem;
 }
 
+.calendar-view {
+  display: grid;
+  gap: 18px;
+}
+
+.calendar-day {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.calendar-date {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.calendar-date strong {
+  text-transform: capitalize;
+}
+
+.calendar-date span,
+.event-type {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.calendar-events {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.calendar-event {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.calendar-event:hover {
+  border-color: var(--accent);
+}
+
+.calendar-event-time {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.calendar-event-body {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.calendar-event-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendar-event-head strong,
+.calendar-event p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.calendar-event p {
+  margin: 0;
+  color: #314254;
+  white-space: pre-wrap;
+}
+
+.compact-transition {
+  margin: 0;
+}
+
 .entry-screen {
   display: grid;
   place-items: center;
@@ -529,8 +618,13 @@ dd {
 @media (max-width: 980px) {
   .layout,
   .workbench,
+  .calendar-day,
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-date {
+    position: static;
   }
 
   .sidebar {
@@ -565,7 +659,8 @@ dd {
 
   .nav,
   .meta-grid,
-  .detail-dates {
+  .detail-dates,
+  .calendar-event {
     grid-template-columns: 1fr;
   }
 }
