@@ -11,6 +11,7 @@ const state = {
   section: "reports",
   filter: "ALL",
   sortBy: "updatedAt",
+  listLimit: window.matchMedia("(max-width: 640px)").matches ? "3" : "ALL",
   selectedReportId: null,
   activeUser: storage.getActiveUser(),
   accessGranted: storage.hasAccessGranted(),
@@ -111,10 +112,13 @@ function getSortedReports() {
   const reports = state.reports;
   const filtered = state.filter === "ALL" ? reports : reports.filter((report) => report.currentStatus === state.filter);
 
-  return filtered.sort((a, b) => {
+  const sorted = filtered.sort((a, b) => {
     if (state.sortBy === "status") return StatusMeta[b.currentStatus].rank - StatusMeta[a.currentStatus].rank;
     return new Date(b[state.sortBy]).getTime() - new Date(a[state.sortBy]).getTime();
   });
+
+  if (state.listLimit === "ALL") return sorted;
+  return sorted.slice(0, Number(state.listLimit));
 }
 
 function getSelectedReport() {
@@ -262,6 +266,11 @@ function renderReports() {
           <option value="status" ${state.sortBy === "status" ? "selected" : ""}>Estado</option>
         </select>
       </label>
+      <label>Límite
+        <select id="list-limit">
+          ${["3", "5", "10", "50", "100", "ALL"].map((limit) => `<option value="${limit}" ${state.listLimit === limit ? "selected" : ""}>${limit === "ALL" ? "Todos" : limit}</option>`).join("")}
+        </select>
+      </label>
     </section>
     <section class="workbench">
       <div class="report-list">${cards || `<div class="empty">No hay partes para este filtro.</div>`}</div>
@@ -275,6 +284,10 @@ function renderReports() {
   });
   document.querySelector("#sort-by").addEventListener("change", (event) => {
     state.sortBy = event.target.value;
+    render();
+  });
+  document.querySelector("#list-limit").addEventListener("change", (event) => {
+    state.listLimit = event.target.value;
     render();
   });
   document.querySelectorAll("[data-select-report]").forEach((button) => {
