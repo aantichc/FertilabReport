@@ -615,8 +615,13 @@ dd {
   padding-right: 0;
 }
 
+.calendar-grid.week .calendar-cell-events {
+  gap: 6px;
+}
+
 .month-event {
-  display: flex;
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   width: 100%;
@@ -647,6 +652,17 @@ dd {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.84rem;
+}
+
+.month-event small {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .note-month-event {

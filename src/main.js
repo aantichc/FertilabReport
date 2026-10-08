@@ -578,8 +578,8 @@ function renderYearCalendar(events) {
 }
 
 function renderCalendarCell(date, events, isMuted) {
-  const isMonth = state.calendarMode === "month";
-  const visibleEvents = isMonth ? events.slice(0, 4) : events;
+  const isCompactCalendar = state.calendarMode === "month" || state.calendarMode === "week";
+  const visibleEvents = isCompactCalendar ? events.slice(0, 4) : events;
   const hiddenCount = Math.max(events.length - visibleEvents.length, 0);
 
   return `
@@ -591,7 +591,7 @@ function renderCalendarCell(date, events, isMuted) {
       <div class="calendar-cell-events">
         ${
           visibleEvents.length
-            ? visibleEvents.map(isMonth ? renderCalendarMonthEvent : renderCalendarEvent).join("")
+            ? visibleEvents.map(isCompactCalendar ? renderCalendarMonthEvent : renderCalendarEvent).join("")
             : `<span class="muted">Sin movimientos</span>`
         }
         ${hiddenCount ? `<button class="more-events" data-calendar-day="${dateKey(date)}">+${hiddenCount} más</button>` : ""}
@@ -672,6 +672,7 @@ function renderCalendarMonthEvent(event) {
     <button class="month-event" data-calendar-report="${event.reportId}">
       ${statusDot(event.newStatus || event.reportStatus)}
       <strong>${escapeHtml(event.reportTitle)}</strong>
+      <small>${escapeHtml(StatusMeta[event.newStatus || event.reportStatus].label)}</small>
     </button>
   `;
 }

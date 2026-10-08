@@ -12,19 +12,19 @@ export const HistoryEntryType = Object.freeze({
 
 export const StatusMeta = Object.freeze({
   [ReportStatus.GREEN]: {
-    label: "Verde",
+    label: "Solucionado",
     tone: "green",
     description: "Situación normal, solucionada o sin problemas relevantes.",
     rank: 1,
   },
   [ReportStatus.YELLOW]: {
-    label: "Amarillo",
+    label: "En progreso",
     tone: "yellow",
     description: "Situación que requiere atención o presenta un problema moderado.",
     rank: 2,
   },
   [ReportStatus.RED]: {
-    label: "Rojo",
+    label: "Pendiente",
     tone: "red",
     description: "Situación crítica o que requiere atención inmediata.",
     rank: 3,
