@@ -5,6 +5,7 @@ import { storage } from "./storage.js";
 import { supabaseClient } from "./supabaseClient.js";
 
 const ACCESS_KEY = "fertilab";
+const REFRESH_INTERVAL_MS = 30000;
 
 const state = {
   section: "reports",
@@ -17,10 +18,12 @@ const state = {
   recipients: [],
   emailLog: [],
   loading: false,
+  refreshing: false,
   error: "",
 };
 
 const app = document.querySelector("#app");
+let refreshTimer = null;
 const dateFormatter = new Intl.DateTimeFormat("es-ES", {
   dateStyle: "short",
   timeStyle: "short",
@@ -114,8 +117,11 @@ function renderShell(content) {
             <span>Usuario activo</span>
             <strong>${hasActiveUser() ? escapeHtml(state.activeUser) : "Sin identificar"}</strong>
           </div>
-          <button data-change-user>${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
-          <button class="subtle" data-lock-access>Salir</button>
+          <div class="user-actions">
+            <button data-refresh type="button">${state.refreshing ? "Actualizando..." : "Refrescar"}</button>
+            <button data-change-user type="button">${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
+            <button class="subtle" data-lock-access type="button">Salir</button>
+          </div>
         </div>
         ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
         ${content}
@@ -132,8 +138,12 @@ function renderShell(content) {
   document.querySelector("[data-change-user]").addEventListener("click", () => {
     openUserDialog();
   });
+  document.querySelector("[data-refresh]").addEventListener("click", () => {
+    refreshSharedData({ silent: true });
+  });
   document.querySelector("[data-lock-access]").addEventListener("click", () => {
     setAccessGranted(false);
+    stopAutoRefresh();
     render();
   });
 }
@@ -432,6 +442,33 @@ async function loadSharedData() {
   }
 }
 
+async function refreshSharedData({ silent = true } = {}) {
+  if (!hasAccessGranted() || !hasActiveUser() || state.loading || state.refreshing) return;
+  if (state.section === "create") return;
+  if (document.activeElement?.matches("input, textarea, select")) return;
+
+  state.refreshing = true;
+  if (!silent) render();
+
+  try {
+    const [reports, recipients, emailLog] = await Promise.all([
+      reportService.getReports(),
+      recipientService.getRecipients(),
+      supabaseClient.listEmailLog(),
+    ]);
+    state.reports = reports;
+    state.recipients = recipients;
+    state.emailLog = normalizeEmailLog(emailLog);
+    state.error = "";
+  } catch (error) {
+    state.error = "No se han podido refrescar los datos compartidos.";
+    console.error(error);
+  } finally {
+    state.refreshing = false;
+    render();
+  }
+}
+
 async function withReload(action) {
   state.error = "";
   state.loading = true;
@@ -484,6 +521,19 @@ function render() {
   else renderReports();
 }
 
+function startAutoRefresh() {
+  if (refreshTimer) return;
+  refreshTimer = window.setInterval(() => {
+    refreshSharedData({ silent: true });
+  }, REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) return;
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
 function renderAccessGate() {
   app.innerHTML = `
     <main class="entry-screen">
@@ -522,6 +572,7 @@ function renderAccessGate() {
     state.error = "";
     setAccessGranted(true);
     render();
+    startAutoRefresh();
     loadSharedData();
   });
 }
@@ -553,9 +604,11 @@ function renderUserGate() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setActiveUser(form.get("name"));
+    startAutoRefresh();
     loadSharedData();
   });
 }
 
 render();
+if (hasAccessGranted() && hasActiveUser()) startAutoRefresh();
 loadSharedData();

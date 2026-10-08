@@ -142,6 +142,14 @@ button:hover {
   border-radius: 8px;
 }
 
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .user-bar span,
 .actor {
   color: var(--muted);
@@ -545,6 +553,14 @@ dd {
   .user-bar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .user-actions {
+    justify-content: stretch;
+  }
+
+  .user-actions button {
+    flex: 1 1 140px;
   }
 
   .nav,
