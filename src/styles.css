@@ -642,7 +642,7 @@ dd {
 }
 
 .note-week-event .week-event-title {
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .week-event-title .status-dot {
@@ -728,11 +728,23 @@ dd {
 }
 
 .note-month-event {
+  grid-template-columns: auto minmax(0, 1fr) auto;
   border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .note-month-event span {
-  color: var(--yellow);
+  min-height: 22px;
+  padding: 0 7px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.compact-note-delete {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 0.72rem;
 }
 
 .more-events {

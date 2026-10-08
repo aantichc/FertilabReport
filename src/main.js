@@ -665,6 +665,7 @@ function renderCalendarMonthEvent(event) {
       <div class="month-event note-month-event">
         <span>Nota</span>
         <strong>${escapeHtml(event.title)}</strong>
+        <button class="danger subtle compact-note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
       </div>
     `;
   }
@@ -685,6 +686,7 @@ function renderCalendarWeekEvent(event) {
         <div class="week-event-title">
           <span class="calendar-event-time">Nota</span>
           <strong>${escapeHtml(event.title)}</strong>
+          <button class="danger subtle compact-note-delete" data-delete-note="${event.id}" type="button">Eliminar</button>
         </div>
         ${event.content ? `<p>${escapeHtml(event.content)}</p>` : ""}
       </div>
