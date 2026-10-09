@@ -1,6 +1,7 @@
 # Fertilab Reports en Teams
 
-El paquete 1.0.1 incorpora `webApplicationInfo` para el SSO. Conserva el ID de
+El paquete 1.0.2 actualiza el icono a un monitor y el tema a azul.
+Mantiene `webApplicationInfo` para el SSO. Conserva el ID de
 la app de Teams para actualizar la instalación existente.
 
 ## Entra

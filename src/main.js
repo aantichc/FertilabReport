@@ -206,7 +206,7 @@ function renderShell(content) {
     <div class="layout">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">F</div>
+          <div class="brand-mark"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="7" width="38" height="27" rx="3"/><path d="M5 28h38M24 34v7M15 41h18"/></svg></div>
           <div>
             <strong>Fertilab</strong>
             <span>Gestión de partes</span>
@@ -1404,7 +1404,7 @@ function renderAccessGate() {
   app.innerHTML = `
     <main class="entry-screen">
       <section class="entry-card">
-        <div class="brand compact"><div class="brand-mark">F</div><div><strong>Fertilab</strong><span>Gestión de partes</span></div></div>
+        <div class="brand compact"><div class="brand-mark"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="7" width="38" height="27" rx="3"/><path d="M5 28h38M24 34v7M15 41h18"/></svg></div><div><strong>Fertilab</strong><span>Gestión de partes</span></div></div>
         <div><p class="eyebrow">Acceso</p><h1>Inicia sesión con Microsoft</h1><p>Utiliza tu cuenta de trabajo @fertilab.org.</p></div>
         ${state.error ? `<div class="error-banner" role="alert">${escapeHtml(state.error)}</div>` : ""}
         <button class="primary" id="microsoft-sign-in" type="button" ${state.authLoading || state.authBusy ? "disabled" : ""}>${state.authLoading ? "Comprobando sesión…" : state.authBusy ? "Conectando con Microsoft…" : "Continuar con Microsoft"}</button>

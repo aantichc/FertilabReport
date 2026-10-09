@@ -1,13 +1,13 @@
 :root {
   color-scheme: light;
-  --bg: #f6f7f9;
+  --bg: #f3f4f6;
   --surface: #ffffff;
-  --surface-muted: #eef2f6;
-  --border: #d7dde5;
-  --text: #1f2933;
-  --muted: #617182;
-  --accent: #116466;
-  --accent-dark: #0b4f51;
+  --surface-muted: #edf2f8;
+  --border: #dce3ed;
+  --text: #16324f;
+  --muted: #637992;
+  --accent: #1c3d5e;
+  --accent-dark: #142e49;
   --danger: #b42318;
   --green: #1f9d55;
   --yellow: #d99a16;
@@ -76,7 +76,7 @@ button:hover {
 }
 
 .sidebar {
-  background: #18232f;
+  background: #1c3d5e;
   color: #fff;
   padding: 28px 18px;
 }
@@ -94,13 +94,27 @@ button:hover {
   width: 42px;
   height: 42px;
   border-radius: 8px;
-  background: #21a0a0;
-  font-weight: 800;
+  background: transparent;
+  color: #fff;
+}
+
+.brand-mark svg {
+  width: 36px;
+  height: 36px;
+}
+
+.compact .brand-mark {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 3px solid #5995c4;
+  outline-offset: 3px;
 }
 
 .brand span {
   display: block;
-  color: #b7c4d2;
+  color: #b8cee2;
   font-size: 0.9rem;
   margin-top: 2px;
 }
@@ -120,7 +134,7 @@ button:hover {
 
 .nav button.active,
 .nav button:hover {
-  background: #253342;
+  background: #235575;
   color: #fff;
 }
 

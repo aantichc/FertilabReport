@@ -4,7 +4,7 @@
     "color": "color.png"
   },
   "manifestVersion": "1.16",
-  "accentColor": "#116466",
+  "accentColor": "#1c3d5e",
   "staticTabs": [
     {
       "scopes": [
@@ -27,7 +27,7 @@
     "name": "Fertilab"
   },
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": {
     "full": "Fertilab Reports",
     "short": "Fertilab Reports"
