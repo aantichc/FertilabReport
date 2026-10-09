@@ -1,0 +1,44 @@
+{
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "manifestVersion": "1.16",
+  "accentColor": "#116466",
+  "staticTabs": [
+    {
+      "scopes": [
+        "personal"
+      ],
+      "contentUrl": "https://fertilabreport-six.vercel.app",
+      "websiteUrl": "https://fertilabreport-six.vercel.app",
+      "entityId": "fertilab-reports",
+      "name": "Fertilab Reports"
+    }
+  ],
+  "description": {
+    "full": "Aplicacion interna para crear, consultar y actualizar partes operativos de Fertilab.",
+    "short": "Gestion de partes Fertilab"
+  },
+  "developer": {
+    "privacyUrl": "https://fertilabreport-six.vercel.app",
+    "websiteUrl": "https://fertilabreport-six.vercel.app",
+    "termsOfUseUrl": "https://fertilabreport-six.vercel.app",
+    "name": "Fertilab"
+  },
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "version": "1.0.1",
+  "name": {
+    "full": "Fertilab Reports",
+    "short": "Fertilab Reports"
+  },
+  "id": "8ebf16b6-3f84-4d82-b4e9-5c0a6d6c2e6f",
+  "packageName": "com.fertilab.reports",
+  "validDomains": [
+    "fertilabreport-six.vercel.app"
+  ],
+  "webApplicationInfo": {
+    "id": "b93ab8b1-fc15-48d9-bd38-ab5e8404a516",
+    "resource": "api://fertilabreport-six.vercel.app/b93ab8b1-fc15-48d9-bd38-ab5e8404a516"
+  }
+}

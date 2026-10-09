@@ -60,7 +60,12 @@ Inicio de sesión Microsoft y lectura de los 8 partes verificados con la cuenta 
 
 
 ## Inicio de sesión dentro de Teams
+El usuario confirmó que el flujo de la ventana de Teams funciona en producción.
 La app inicializa TeamsJS y utiliza authentication.authenticate para abrir teams-auth.html en una ventana de autenticación de Teams. Esa página redirige a Supabase/Microsoft y devuelve únicamente el código de un solo uso. La pestaña original conserva el verificador PKCE y canjea el código por la sesión; no se transfieren tokens mediante notifySuccess ni se depende de almacenamiento compartido entre ventanas.
 El retorno https://fertilabreport-six.vercel.app/teams-auth.html está autorizado en Supabase. No requiere cambiar el registro Entra (su retorno sigue siendo /auth/v1/callback de Supabase) ni el paquete Teams, que ya permite el dominio público.
+Para el acceso automático con la identidad de Teams, consultar `teams/README.md`:
+esta mejora adicional sí requiere el permiso access_as_user en Entra y actualizar
+el paquete de Teams a 1.0.1. La API /api/teams-sso solo admite identidades Teams
+verificadas que ya estén vinculadas a una cuenta Azure de Fertilab en Supabase.
 Comprobaciones: compilación de ambas páginas y 8 pruebas, incluidos correlación, cancelación y rechazo de destinos ajenos. La confirmación interactiva final corresponde al cliente Teams del usuario.
 
