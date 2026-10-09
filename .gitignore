@@ -7,3 +7,7 @@ build/
 Thumbs.db
 teams-app/
 Fertilab-Reports-Teams-App.zip
+
+# Local VRepro import artifacts
+vrepro-actions-2026-10-09.json
+supabase/import-vrepro-actions.sql
