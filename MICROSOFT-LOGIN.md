@@ -39,7 +39,7 @@ Nunca dar un prefijo `VITE_` al secreto de Microsoft, a la clave de servicio ni 
 3. Publica el código y aplica `supabase/microsoft-access.sql` en el SQL Editor en la misma ventana de puesta en marcha. Este archivo requiere autenticación Microsoft de Fertilab para leer o modificar datos. No lo ejecutes mientras la versión publicada siga usando la clave compartida: esa versión perdería el acceso a los datos.
 4. Verifica una lectura y una actualización con una cuenta Fertilab; comprueba que una petición anónima ya no puede leer partes. Verifica la notificación de creación y el cron con sus credenciales de servidor.
 
-El código no se ha publicado y las políticas no se han aplicado a la base de datos activa. La configuración del proveedor y la prueba de una cuenta real son requisitos pendientes para completar la activación.
+Publicado en https://fertilabreport-six.vercel.app/ el 9 de octubre de 2026. Microsoft Entra, Azure en Supabase y las URLs están configurados; el usuario verificó inicio de sesión, nombre y lectura de partes en local. Las variables privadas están configuradas en Vercel y microsoft-access.sql está aplicado en producción. Se verificó que una cuenta Fertilab puede leer los 8 partes, que anon no puede leer ninguna de las siete tablas, que la API de correo rechaza solicitudes sin sesión (401) y que el cron reconoce sus credenciales y rechaza un método no permitido (405), sin enviar correos de prueba. Pendiente la prueba interactiva de inicio de sesión en la URL pública por el usuario.
 
 ## Desarrollo y comprobaciones
 
@@ -56,4 +56,5 @@ Documentación: https://supabase.com/docs/guides/auth/social-login/auth-azure
 
 ## Prueba local verificada (9 octubre 2026)
 Inicio de sesión Microsoft y lectura de los 8 partes verificados con la cuenta Fertilab en localhost:4174. Se aplicó microsoft-access-transition.sql: concede permisos a authenticated y restringe ese rol a Microsoft @fertilab.org. Los permisos antiguos de anon permanecen hasta publicar la nueva versión y aplicar microsoft-access.sql.
+
 
