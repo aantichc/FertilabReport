@@ -1,10 +1,7 @@
 import nodemailer from "nodemailer";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://bvqtznwagqrlwydslaxv.supabase.co";
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2cXR6bndhZ3FybHd5ZHNsYXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTIzMTYsImV4cCI6MjEwNjk4ODMxNn0.sgAdwLF1cdDTAhp72WJ2hM35Ig1PptZTrgHOz7322ME";
+const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const CATEGORY_LABELS = {
   IT: "IT",
@@ -14,8 +11,8 @@ const CATEGORY_LABELS = {
 
 function supabaseHeaders(extra = {}) {
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: SUPABASE_SERVER_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVER_KEY}`,
     "Content-Type": "application/json",
     ...extra,
   };
@@ -138,6 +135,14 @@ async function recordNotification(taskId, occurrenceDate, recipients) {
 }
 
 export default async function handler(request, response) {
+  if (!process.env.CRON_SECRET || request.headers?.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+    response.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!SUPABASE_SERVER_KEY) {
+    response.status(500).json({ error: "SUPABASE_SERVICE_ROLE_KEY is not configured" });
+    return;
+  }
   if (request.method !== "GET" && request.method !== "POST") {
     response.setHeader("Allow", "GET, POST");
     response.status(405).json({ error: "Method not allowed" });

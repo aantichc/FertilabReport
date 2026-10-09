@@ -1,5 +1,5 @@
 import { storage } from "./storage.js";
-import { supabaseClient } from "./supabaseClient.js";
+import { supabaseClient, authClient } from "./supabaseClient.js";
 import { CategoryMeta, ReportCategory, StatusMeta } from "./models.js";
 
 export async function notifyReportCreated(report, recipients) {
@@ -35,10 +35,13 @@ export async function notifyReportCreated(report, recipients) {
   });
 
   try {
+    const { data: { session } } = await authClient.auth.getSession();
+    if (!session) throw new Error("La sesión ha caducado.");
     await fetch("/api/send-report-email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({
         recipients: notification.recipients,

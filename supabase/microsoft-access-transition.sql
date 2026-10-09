@@ -1,92 +1,10 @@
-create extension if not exists "pgcrypto";
-
-create table if not exists public.reports (
-  id uuid primary key default gen_random_uuid(),
-  title text not null,
-  content text not null,
-  category text not null default 'IT' check (category in ('IT', 'INSTALLATIONS', 'PURCHASES')),
-  is_urgent boolean not null default false,
-  current_status text not null check (current_status in ('GREEN', 'YELLOW', 'RED')),
-  published_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.reports
-  add column if not exists category text not null default 'IT'
-  check (category in ('IT', 'INSTALLATIONS', 'PURCHASES'));
-
-alter table public.reports
-  add column if not exists is_urgent boolean not null default false;
-
-create table if not exists public.report_history (
-  id uuid primary key default gen_random_uuid(),
-  report_id uuid not null references public.reports(id) on delete cascade,
-  type text not null check (type in ('CREACION', 'ACTUALIZACION', 'CAMBIO_ESTADO')),
-  content text,
-  previous_status text check (previous_status is null or previous_status in ('GREEN', 'YELLOW', 'RED')),
-  new_status text check (new_status is null or new_status in ('GREEN', 'YELLOW', 'RED')),
-  created_at timestamptz not null default now(),
-  user_name text
-);
-
-create table if not exists public.notification_recipients (
-  id uuid primary key default gen_random_uuid(),
-  email text not null unique,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.email_log (
-  id uuid primary key default gen_random_uuid(),
-  report_id uuid references public.reports(id) on delete set null,
-  recipients text[] not null default '{}',
-  subject text not null,
-  payload jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.calendar_notes (
-  id uuid primary key default gen_random_uuid(),
-  title text not null,
-  content text,
-  note_date date not null,
-  created_at timestamptz not null default now(),
-  created_by text
-);
-
-create table if not exists public.preventive_tasks (
-  id uuid primary key default gen_random_uuid(),
-  title text not null,
-  content text,
-  category text not null default 'IT' check (category in ('IT', 'INSTALLATIONS', 'PURCHASES')),
-  start_date date not null,
-  repeat_enabled boolean not null default false,
-  repeat_every_count integer not null default 1 check (repeat_every_count > 0),
-  repeat_every_unit text not null default 'weeks' check (repeat_every_unit in ('days', 'weeks', 'months')),
-  notify_enabled boolean not null default false,
-  notify_lead_count integer not null default 1 check (notify_lead_count >= 0),
-  notify_lead_unit text not null default 'days' check (notify_lead_unit in ('days', 'weeks')),
-  created_at timestamptz not null default now(),
-  created_by text
-);
-
-create table if not exists public.preventive_notification_log (
-  id uuid primary key default gen_random_uuid(),
-  task_id uuid not null references public.preventive_tasks(id) on delete cascade,
-  occurrence_date date not null,
-  recipients text[] not null default '{}',
-  created_at timestamptz not null default now(),
-  unique (task_id, occurrence_date)
-);
-
+-- Transitional authenticated access; legacy anon access remains until deployment.
+begin;
 grant usage on schema public to authenticated;
 
 alter table public.reports enable row level security;
-revoke all on public.reports from anon;
+revoke truncate, references, trigger on public.reports from authenticated;
 grant select, insert, update, delete on public.reports to authenticated;
-drop policy if exists "Public read reports" on public.reports;
-drop policy if exists "Public insert reports" on public.reports;
-drop policy if exists "Public update reports" on public.reports;
-drop policy if exists "Public delete reports" on public.reports;
 drop policy if exists "Fertilab Microsoft access" on public.reports;
 create policy "Fertilab Microsoft access" on public.reports as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select reports" on public.reports;
@@ -99,10 +17,8 @@ drop policy if exists "Fertilab delete reports" on public.reports;
 create policy "Fertilab delete reports" on public.reports for delete to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.report_history enable row level security;
-revoke all on public.report_history from anon;
+revoke truncate, references, trigger on public.report_history from authenticated;
 grant select, insert on public.report_history to authenticated;
-drop policy if exists "Public read history" on public.report_history;
-drop policy if exists "Public insert history" on public.report_history;
 drop policy if exists "Fertilab Microsoft access" on public.report_history;
 create policy "Fertilab Microsoft access" on public.report_history as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select report_history" on public.report_history;
@@ -111,12 +27,8 @@ drop policy if exists "Fertilab insert report_history" on public.report_history;
 create policy "Fertilab insert report_history" on public.report_history for insert to authenticated with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.notification_recipients enable row level security;
-revoke all on public.notification_recipients from anon;
+revoke truncate, references, trigger on public.notification_recipients from authenticated;
 grant select, insert, update, delete on public.notification_recipients to authenticated;
-drop policy if exists "Public read recipients" on public.notification_recipients;
-drop policy if exists "Public insert recipients" on public.notification_recipients;
-drop policy if exists "Public update recipients" on public.notification_recipients;
-drop policy if exists "Public delete recipients" on public.notification_recipients;
 drop policy if exists "Fertilab Microsoft access" on public.notification_recipients;
 create policy "Fertilab Microsoft access" on public.notification_recipients as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select notification_recipients" on public.notification_recipients;
@@ -129,10 +41,8 @@ drop policy if exists "Fertilab delete notification_recipients" on public.notifi
 create policy "Fertilab delete notification_recipients" on public.notification_recipients for delete to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.email_log enable row level security;
-revoke all on public.email_log from anon;
+revoke truncate, references, trigger on public.email_log from authenticated;
 grant select, insert on public.email_log to authenticated;
-drop policy if exists "Public read email log" on public.email_log;
-drop policy if exists "Public insert email log" on public.email_log;
 drop policy if exists "Fertilab Microsoft access" on public.email_log;
 create policy "Fertilab Microsoft access" on public.email_log as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select email_log" on public.email_log;
@@ -141,11 +51,8 @@ drop policy if exists "Fertilab insert email_log" on public.email_log;
 create policy "Fertilab insert email_log" on public.email_log for insert to authenticated with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.calendar_notes enable row level security;
-revoke all on public.calendar_notes from anon;
+revoke truncate, references, trigger on public.calendar_notes from authenticated;
 grant select, insert, delete on public.calendar_notes to authenticated;
-drop policy if exists "Public read calendar notes" on public.calendar_notes;
-drop policy if exists "Public insert calendar notes" on public.calendar_notes;
-drop policy if exists "Public delete calendar notes" on public.calendar_notes;
 drop policy if exists "Fertilab Microsoft access" on public.calendar_notes;
 create policy "Fertilab Microsoft access" on public.calendar_notes as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select calendar_notes" on public.calendar_notes;
@@ -156,12 +63,8 @@ drop policy if exists "Fertilab delete calendar_notes" on public.calendar_notes;
 create policy "Fertilab delete calendar_notes" on public.calendar_notes for delete to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.preventive_tasks enable row level security;
-revoke all on public.preventive_tasks from anon;
+revoke truncate, references, trigger on public.preventive_tasks from authenticated;
 grant select, insert, update, delete on public.preventive_tasks to authenticated;
-drop policy if exists "Public read preventive tasks" on public.preventive_tasks;
-drop policy if exists "Public insert preventive tasks" on public.preventive_tasks;
-drop policy if exists "Public update preventive tasks" on public.preventive_tasks;
-drop policy if exists "Public delete preventive tasks" on public.preventive_tasks;
 drop policy if exists "Fertilab Microsoft access" on public.preventive_tasks;
 create policy "Fertilab Microsoft access" on public.preventive_tasks as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select preventive_tasks" on public.preventive_tasks;
@@ -174,13 +77,15 @@ drop policy if exists "Fertilab delete preventive_tasks" on public.preventive_ta
 create policy "Fertilab delete preventive_tasks" on public.preventive_tasks for delete to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 
 alter table public.preventive_notification_log enable row level security;
-revoke all on public.preventive_notification_log from anon;
+revoke truncate, references, trigger on public.preventive_notification_log from authenticated;
 grant select, insert on public.preventive_notification_log to authenticated;
-drop policy if exists "Public read preventive notification log" on public.preventive_notification_log;
-drop policy if exists "Public insert preventive notification log" on public.preventive_notification_log;
 drop policy if exists "Fertilab Microsoft access" on public.preventive_notification_log;
 create policy "Fertilab Microsoft access" on public.preventive_notification_log as restrictive for all to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org') with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab select preventive_notification_log" on public.preventive_notification_log;
 create policy "Fertilab select preventive_notification_log" on public.preventive_notification_log for select to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab insert preventive_notification_log" on public.preventive_notification_log;
 create policy "Fertilab insert preventive_notification_log" on public.preventive_notification_log for insert to authenticated with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
+
+commit;
+
+

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { requireFertilabSession } from "../lib/serverAuth.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -54,6 +55,10 @@ export default async function handler(request, response) {
   }
 
   try {
+    if (!await requireFertilabSession(request)) {
+      response.status(401).json({ error: "Inicia sesión con una cuenta Microsoft de Fertilab." });
+      return;
+    }
     const { report, recipients } = request.body ?? {};
     const recipientEmails = Array.isArray(recipients)
       ? recipients.map((email) => String(email).trim()).filter(Boolean)

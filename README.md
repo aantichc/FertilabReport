@@ -5,6 +5,8 @@ Web app para crear, consultar y actualizar partes con historial permanente.
 ## Ejecutar
 
 ```powershell
+pnpm install
+pnpm build
 node server.mjs
 ```
 
@@ -16,10 +18,11 @@ http://localhost:4173
 
 ## Arquitectura
 
-La primera versión está construida sin dependencias externas para que sea sencilla de ejecutar y mantener.
+La interfaz usa Vite y Supabase Auth para iniciar sesión con Microsoft.
 
 - `src/models.js`: estados, tipos de historial y metadatos visuales.
-- `src/storage.js`: persistencia en `localStorage`.
+- `src/authService.js`: sesión Microsoft, validación de cuentas Fertilab y cierre de sesión.
+- `src/storage.js`: registro local de notificaciones.
 - `src/reportService.js`: creación, actualizaciones, cambios de estado y borrado de partes.
 - `src/recipientService.js`: gestión de correos destinatarios.
 - `src/notificationService.js`: adaptador de notificación al crear partes.
@@ -62,4 +65,4 @@ Para preparar un proyecto nuevo de Supabase:
 2. Crea una nueva query.
 3. Pega y ejecuta el contenido de `supabase/schema.sql`.
 
-La app conserva en `localStorage` solo el nombre del usuario activo en ese navegador.
+El acceso con Microsoft y la configuración requerida están documentados en [MICROSOFT-LOGIN.md](MICROSOFT-LOGIN.md). La clave compartida y la identificación manual se han eliminado del código. Supabase Auth gestiona la sesión persistente del navegador.

@@ -1,8 +1,14 @@
-const SUPABASE_URL =
+import { createClient } from "@supabase/supabase-js";
+
+export const SUPABASE_URL =
   import.meta.env?.VITE_SUPABASE_URL ?? "https://bvqtznwagqrlwydslaxv.supabase.co";
 const SUPABASE_ANON_KEY =
   import.meta.env?.VITE_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2cXR6bndhZ3FybHd5ZHNsYXh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTIzMTYsImV4cCI6MjEwNjk4ODMxNn0.sgAdwLF1cdDTAhp72WJ2hM35Ig1PptZTrgHOz7322ME";
+
+export const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
 
 function headers(extra = {}) {
   return {
@@ -15,9 +21,12 @@ function headers(extra = {}) {
 }
 
 async function request(path, options = {}) {
+  const { data: { session }, error } = await authClient.auth.getSession();
+  if (error) throw error;
+  if (!session) throw new Error("Debes iniciar sesión con Microsoft.");
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
-    headers: headers(options.headers),
+    headers: headers({ ...options.headers, Authorization: `Bearer ${session.access_token}` }),
   });
 
   if (!response.ok) {

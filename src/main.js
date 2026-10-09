@@ -1,10 +1,9 @@
 import { CategoryMeta, HistoryEntryType, ReportCategory, StatusMeta, categories, statuses } from "./models.js";
 import { recipientService } from "./recipientService.js";
 import { reportService } from "./reportService.js";
-import { storage } from "./storage.js";
+import { authService, accountName, isFertilabUser } from "./authService.js";
 import { supabaseClient } from "./supabaseClient.js";
 
-const ACCESS_KEY = "fertilab";
 const REFRESH_INTERVAL_MS = 30000;
 
 const state = {
@@ -14,8 +13,10 @@ const state = {
   sortBy: "updatedAt",
   listLimit: window.matchMedia("(max-width: 640px)").matches ? "3" : "ALL",
   selectedReportId: null,
-  activeUser: storage.getActiveUser(),
-  accessGranted: storage.hasAccessGranted(),
+  activeUser: "",
+  session: null,
+  authLoading: true,
+  authBusy: false,
   reports: [],
   recipients: [],
   emailLog: [],
@@ -157,17 +158,7 @@ function hasActiveUser() {
 }
 
 function hasAccessGranted() {
-  return state.accessGranted === true;
-}
-
-function setActiveUser(name) {
-  state.activeUser = name.trim();
-  storage.saveActiveUser(state.activeUser);
-}
-
-function setAccessGranted(granted) {
-  state.accessGranted = Boolean(granted);
-  storage.saveAccessGranted(state.accessGranted);
+  return Boolean(state.session && isFertilabUser(state.session.user));
 }
 
 function normalizeEmailLog(log) {
@@ -236,8 +227,7 @@ function renderShell(content) {
           </div>
           <div class="user-actions">
             <button data-refresh type="button">${state.refreshing ? "Actualizando..." : "Refrescar"}</button>
-            <button data-change-user type="button">${hasActiveUser() ? "Cambiar nombre" : "Indicar nombre"}</button>
-            <button class="subtle" data-lock-access type="button">Salir</button>
+            <button class="subtle" data-sign-out type="button">Salir</button>
           </div>
         </div>
         ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
@@ -253,16 +243,12 @@ function renderShell(content) {
       render();
     });
   });
-  document.querySelector("[data-change-user]").addEventListener("click", () => {
-    openUserDialog();
-  });
   document.querySelector("[data-refresh]").addEventListener("click", () => {
     refreshSharedData({ silent: true });
   });
-  document.querySelector("[data-lock-access]").addEventListener("click", () => {
-    setAccessGranted(false);
-    stopAutoRefresh();
-    render();
+  document.querySelector("[data-sign-out]").addEventListener("click", async () => {
+    try { await authService.signOut(); applySession(null); }
+    catch { state.error = "No se ha podido cerrar la sesión. Inténtalo de nuevo."; render(); }
   });
   document.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => {
     state.confirmDialog = null;
@@ -1295,6 +1281,7 @@ async function loadSharedData() {
   render();
 
   try {
+    const sessionUserId = state.session?.user.id;
     const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
@@ -1302,6 +1289,7 @@ async function loadSharedData() {
       supabaseClient.listCalendarNotes(),
       supabaseClient.listPreventiveTasks(),
     ]);
+    if (!sessionUserId || sessionUserId !== state.session?.user.id) return;
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
@@ -1325,6 +1313,7 @@ async function refreshSharedData({ silent = true } = {}) {
   if (!silent) render();
 
   try {
+    const sessionUserId = state.session?.user.id;
     const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
@@ -1332,6 +1321,7 @@ async function refreshSharedData({ silent = true } = {}) {
       supabaseClient.listCalendarNotes(),
       supabaseClient.listPreventiveTasks(),
     ]);
+    if (!sessionUserId || sessionUserId !== state.session?.user.id) return;
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
@@ -1354,6 +1344,7 @@ async function withReload(action) {
 
   try {
     await action();
+    const sessionUserId = state.session?.user.id;
     const [reports, recipients, emailLog, calendarNotes, preventiveTasks] = await Promise.all([
       reportService.getReports(),
       recipientService.getRecipients(),
@@ -1361,6 +1352,7 @@ async function withReload(action) {
       supabaseClient.listCalendarNotes(),
       supabaseClient.listPreventiveTasks(),
     ]);
+    if (!sessionUserId || sessionUserId !== state.session?.user.id) return;
     state.reports = reports;
     state.recipients = recipients;
     state.emailLog = normalizeEmailLog(emailLog);
@@ -1375,17 +1367,8 @@ async function withReload(action) {
   }
 }
 
-function openUserDialog() {
-  const name = window.prompt("Indica tu nombre para registrar tus acciones", state.activeUser);
-  if (!name || !name.trim()) return false;
-  setActiveUser(name);
-  render();
-  return true;
-}
-
 function ensureActiveUser() {
-  if (hasActiveUser()) return true;
-  return openUserDialog();
+  return hasAccessGranted() && hasActiveUser();
 }
 
 function render() {
@@ -1395,7 +1378,7 @@ function render() {
   }
 
   if (!hasActiveUser()) {
-    renderUserGate();
+    renderAccessGate();
     return;
   }
   if (state.section === "create") renderCreate();
@@ -1420,78 +1403,61 @@ function stopAutoRefresh() {
 function renderAccessGate() {
   app.innerHTML = `
     <main class="entry-screen">
-      <form class="entry-card" id="access-entry-form">
-        <div class="brand compact">
-          <div class="brand-mark">F</div>
-          <div>
-            <strong>Fertilab</strong>
-            <span>Gestión de partes</span>
-          </div>
-        </div>
-        <div>
-          <p class="eyebrow">Acceso</p>
-          <h1>Introduce la clave</h1>
-        </div>
-        ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ""}
-        <label>Clave de acceso
-          <input name="accessKey" type="password" required autocomplete="current-password" autofocus />
-        </label>
-        <button class="primary" type="submit">Entrar</button>
-      </form>
+      <section class="entry-card">
+        <div class="brand compact"><div class="brand-mark">F</div><div><strong>Fertilab</strong><span>Gestión de partes</span></div></div>
+        <div><p class="eyebrow">Acceso</p><h1>Inicia sesión con Microsoft</h1><p>Utiliza tu cuenta de trabajo @fertilab.org.</p></div>
+        ${state.error ? `<div class="error-banner" role="alert">${escapeHtml(state.error)}</div>` : ""}
+        <button class="primary" id="microsoft-sign-in" type="button" ${state.authLoading || state.authBusy ? "disabled" : ""}>${state.authLoading ? "Comprobando sesión…" : state.authBusy ? "Conectando con Microsoft…" : "Continuar con Microsoft"}</button>
+      </section>
     </main>
   `;
-
-  document.querySelector("#access-entry-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const submittedKey = String(form.get("accessKey") ?? "").trim();
-
-    if (submittedKey !== ACCESS_KEY) {
-      state.error = "Clave de acceso incorrecta.";
-      renderAccessGate();
-      return;
-    }
-
+  document.querySelector("#microsoft-sign-in").addEventListener("click", async () => {
+    state.authBusy = true;
     state.error = "";
-    setAccessGranted(true);
-    render();
-    startAutoRefresh();
-    loadSharedData();
+    renderAccessGate();
+    try { await authService.signIn(); }
+    catch { state.error = "No se ha podido iniciar sesión con Microsoft. Inténtalo de nuevo o contacta con informática."; state.authBusy = false; renderAccessGate(); }
   });
 }
 
-function renderUserGate() {
-  app.innerHTML = `
-    <main class="entry-screen">
-      <form class="entry-card" id="user-entry-form">
-        <div class="brand compact">
-          <div class="brand-mark">F</div>
-          <div>
-            <strong>Fertilab</strong>
-            <span>Gestión de partes</span>
-          </div>
-        </div>
-        <div>
-          <p class="eyebrow">Identificación</p>
-          <h1>¿Quién está usando la app?</h1>
-        </div>
-        <label>Tu nombre
-          <input name="name" required autocomplete="name" placeholder="Nombre aquí" autofocus />
-        </label>
-        <button class="primary" type="submit">Entrar</button>
-      </form>
-    </main>
-  `;
-
-  document.querySelector("#user-entry-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setActiveUser(form.get("name"));
+function applySession(session) {
+  const previousUserId = state.session?.user?.id;
+  state.session = session && isFertilabUser(session.user) ? session : null;
+  state.activeUser = state.session ? accountName(state.session.user) : "";
+  state.authLoading = false;
+  state.authBusy = false;
+  if (!state.session || previousUserId !== state.session.user.id) {
+    stopAutoRefresh();
+    state.reports = [];
+    state.recipients = [];
+    state.emailLog = [];
+    state.calendarNotes = [];
+    state.preventiveTasks = [];
+    state.selectedReportId = null;
+    state.confirmDialog = null;
+    state.section = "reports";
+  }
+  render();
+  if (state.session && previousUserId !== state.session.user.id) {
     startAutoRefresh();
     loadSharedData();
+  }
+}
+
+async function initializeAuth() {
+  // Discard the former shared-password and manually entered identity flags.
+  window.localStorage.removeItem("fertilab.accessGranted.v1");
+  window.localStorage.removeItem("fertilab.activeUser.v1");
+  try { applySession(await authService.getSession()); }
+  catch (error) { state.error = error.message || "No se ha podido comprobar la sesión."; applySession(null); }
+  authService.onChange((session) => {
+    if (session && !isFertilabUser(session.user)) {
+      state.error = "Solo pueden acceder cuentas Microsoft de Fertilab (@fertilab.org).";
+      authService.signOut().catch(console.error);
+    }
+    applySession(session);
   });
 }
 
 render();
-if (hasAccessGranted() && hasActiveUser()) startAutoRefresh();
-loadSharedData();
+initializeAuth();
