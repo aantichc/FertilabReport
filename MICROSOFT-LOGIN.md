@@ -58,3 +58,9 @@ Documentación: https://supabase.com/docs/guides/auth/social-login/auth-azure
 Inicio de sesión Microsoft y lectura de los 8 partes verificados con la cuenta Fertilab en localhost:4174. Se aplicó microsoft-access-transition.sql: concede permisos a authenticated y restringe ese rol a Microsoft @fertilab.org. Los permisos antiguos de anon permanecen hasta publicar la nueva versión y aplicar microsoft-access.sql.
 
 
+
+## Inicio de sesión dentro de Teams
+La app inicializa TeamsJS y utiliza authentication.authenticate para abrir teams-auth.html en una ventana de autenticación de Teams. Esa página redirige a Supabase/Microsoft y devuelve únicamente el código de un solo uso. La pestaña original conserva el verificador PKCE y canjea el código por la sesión; no se transfieren tokens mediante notifySuccess ni se depende de almacenamiento compartido entre ventanas.
+El retorno https://fertilabreport-six.vercel.app/teams-auth.html está autorizado en Supabase. No requiere cambiar el registro Entra (su retorno sigue siendo /auth/v1/callback de Supabase) ni el paquete Teams, que ya permite el dominio público.
+Comprobaciones: compilación de ambas páginas y 8 pruebas, incluidos correlación, cancelación y rechazo de destinos ajenos. La confirmación interactiva final corresponde al cliente Teams del usuario.
+

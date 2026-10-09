@@ -1416,7 +1416,7 @@ function renderAccessGate() {
     state.error = "";
     renderAccessGate();
     try { await authService.signIn(); }
-    catch { state.error = "No se ha podido iniciar sesión con Microsoft. Inténtalo de nuevo o contacta con informática."; state.authBusy = false; renderAccessGate(); }
+    catch (error) { state.error = error.message || "No se ha podido iniciar sesión con Microsoft. Inténtalo de nuevo o contacta con informática."; state.authBusy = false; renderAccessGate(); }
   });
 }
 

@@ -1,9 +1,12 @@
 import { authClient } from "./supabaseClient.js";
 import { isFertilabUser } from "./identity.js";
+import { authentication, teamsHostReady } from "./teamsHost.js";
+import { signInTeams } from "./teamsAuthFlow.js";
 export { isFertilabUser, accountName } from "./identity.js";
 
 export const authService = {
   async getSession() {
+    await teamsHostReady;
     const { data, error } = await authClient.auth.getSession();
     if (error) throw error;
     if (!data.session) return null;
@@ -16,6 +19,13 @@ export const authService = {
     return { ...data.session, user };
   },
   async signIn() {
+    if (await teamsHostReady) {
+      await signInTeams({ auth: authClient.auth, authentication, origin: window.location.origin, requestId: crypto.randomUUID() });
+      return;
+    }
+    if (window.parent !== window) {
+      throw new Error("No se ha podido conectar con Teams. Cierra y vuelve a abrir Fertilab Reports.");
+    }
     const { error } = await authClient.auth.signInWithOAuth({
       provider: "azure",
       options: {
