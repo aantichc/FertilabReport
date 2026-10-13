@@ -1,3 +1,4 @@
+import { renderReportCharts } from "./reportCharts.js";
 import { CategoryMeta, HistoryEntryType, ReportCategory, StatusMeta, categories, statuses } from "./models.js";
 import { recipientService } from "./recipientService.js";
 import { reportService } from "./reportService.js";
@@ -216,6 +217,7 @@ function renderShell(content) {
           <button class="${state.section === "reports" ? "active" : ""}" data-section="reports">Ver partes</button>
           <button class="${state.section === "create" ? "active" : ""}" data-section="create">Generar parte</button>
           <button class="${state.section === "calendar" ? "active" : ""}" data-section="calendar">Calendario</button>
+          <button class="${state.section === "charts" ? "active" : ""}" data-section="charts">Gráficas</button>
           <button class="${state.section === "settings" ? "active" : ""}" data-section="settings">Correos de notificación</button>
         </nav>
       </aside>
@@ -1383,6 +1385,7 @@ function render() {
   }
   if (state.section === "create") renderCreate();
   else if (state.section === "calendar") renderCalendar();
+  else if (state.section === "charts") renderShell(state.loading ? `<div class="empty">Cargando datos compartidos...</div>` : renderReportCharts(state.reports));
   else if (state.section === "settings") renderSettings();
   else renderReports();
 }
