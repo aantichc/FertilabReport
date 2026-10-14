@@ -223,7 +223,7 @@ function renderShell(content) {
           }).join("")}
           <button class="${state.section === "create" ? "active" : ""}" data-section="create">Generar parte</button>
           <button class="${state.section === "calendar" ? "active" : ""}" data-section="calendar">Calendario</button>
-          <button class="${state.section === "charts" ? "active" : ""}" data-section="charts">Gráficas</button>
+          <button class="${state.section === "charts" ? "active" : ""}" data-section="charts">Estadísticas</button>
           <button class="${state.section === "settings" ? "active" : ""}" data-section="settings">Correos de notificación</button>
         </nav>
       </aside>

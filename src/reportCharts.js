@@ -22,6 +22,40 @@ function segment(start, count, total, radius, color, label) {
     transform="rotate(-90 180 180)"><title>${label}: ${count} (${Math.round(count / total * 100)} %)</title></circle>`;
 }
 
+export function summarizeStatistics(reports) {
+  const counts = summarizeReports(reports);
+  return categories.map(category => {
+    const byStatus = Object.fromEntries(statuses.map(status => [status, counts[status][category]]));
+    const total = statuses.reduce((sum, status) => sum + byStatus[status], 0);
+    const urgent = reports.filter(report => (report.category ?? "IT") === category && statuses.includes(report.currentStatus) && report.isUrgent === true).length;
+    return { category, total, urgent, byStatus };
+  });
+}
+
+function renderStatistics(reports) {
+  const statistics = summarizeStatistics(reports);
+  const order = ["RED", "YELLOW", "GREEN"];
+  const total = statistics.reduce((sum, category) => sum + category.total, 0);
+  const urgentTotal = statistics.reduce((sum, category) => sum + category.urgent, 0);
+  const bar = (label, count, denominator, color) => {
+    const percent = denominator ? Math.round(count / denominator * 100) : 0;
+    return `<div class="stat-row"><span>${label}</span><div class="stat-track" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}" aria-valuetext="${count} de ${denominator} partes (${percent} %)" style="--stat-color:${color}"><span style="width:${percent}%"></span></div><strong>${count}</strong></div>`;
+  };
+  return `<section class="statistics-grid" aria-label="Estadísticas por clase">
+    ${statistics.map(item => `<article class="statistics-card">
+      <h2><span class="chart-swatch" style="background:${categoryColors[item.category]}" aria-hidden="true"></span>${CategoryMeta[item.category].label}<span class="stat-category-total">${item.total} ${item.total === 1 ? "parte" : "partes"}</span></h2>
+      <div class="stat-bars">${order.map(status => bar(StatusMeta[status].label, item.byStatus[status], item.total, statusColors[status])).join("")}</div>
+      <div class="stat-urgency">${bar("Urgentes", item.urgent, item.total, "#b42318")}</div>
+    </article>`).join("")}
+    </section>
+    <section class="statistics-summary" aria-labelledby="stats-summary-title">
+      <h2 id="stats-summary-title">Resumen general <span class="stat-category-total">${total} ${total === 1 ? "parte" : "partes"}</span></h2>
+      <div class="stat-totals">${order.map(status => `<div><strong style="color:${statusColors[status]}">${statistics.reduce((sum,item) => sum + item.byStatus[status],0)}</strong><span>${StatusMeta[status].label}</span></div>`).join("")}
+        <div><strong style="color:#b42318">${urgentTotal}</strong><span>Urgentes</span></div></div>
+      <p class="stat-footnote">Los urgentes son los partes marcados como urgentes y pueden estar en cualquiera de los estados.</p>
+    </section>`;
+}
+
 export function renderReportCharts(reports) {
   const counts = summarizeReports(reports);
   const statusTotal = status => categories.reduce((sum, category) => sum + counts[status][category], 0);
@@ -39,8 +73,10 @@ export function renderReportCharts(reports) {
     return inner + outer;
   }).join("");
   const legend = (keys, meta, colors, getCount) => keys.map(key => `<li><span class="chart-swatch" style="background:${colors[key]}" aria-hidden="true"></span><span>${meta[key].label}</span><strong>${getCount(key)}</strong><small>${total ? Math.round(getCount(key) / total * 100) : 0} %</small></li>`).join("");
-  return `<div class="page-header"><div><p class="eyebrow">Gráficas</p><h1>Distribución de partes</h1></div></div>
+  return `<div class="page-header"><div><p class="eyebrow">Partes</p><h1>Estadísticas</h1></div></div>
     <p class="muted">Todos los partes, según su estado actual y clase. Los filtros de las pestañas de partes no se aplican aquí.</p>
+    ${renderStatistics(reports)}
+    <h2 class="statistics-chart-heading">Distribución de partes</h2>
     ${!total ? `<div class="empty">Todavía no hay partes para mostrar en el gráfico.</div>` : `
     <section class="charts-panel">
       <figure class="radial-chart">

@@ -1346,3 +1346,27 @@ dd {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+.statistics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-bottom: 22px; }
+.statistics-card, .statistics-summary { padding: 26px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); min-width: 0; }
+.statistics-card h2, .statistics-summary h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; font-size: 1.1rem; }
+.stat-category-total { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+.stat-bars { display: grid; gap: 16px; }
+.stat-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 32px; align-items: center; gap: 14px; }
+.stat-row > span { color: var(--muted); font-size: 0.94rem; }
+.stat-row > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.stat-track { height: 20px; overflow: hidden; border-radius: 6px; background: var(--bg); }
+.stat-track > span { display: block; height: 100%; background: var(--stat-color); border-radius: inherit; }
+.stat-urgency { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--border); }
+.statistics-summary { margin-bottom: 28px; }
+.stat-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.stat-totals > div { display: grid; justify-items: center; gap: 8px; padding: 20px 10px; border-radius: 8px; background: #f8fafc; }
+.stat-totals strong { font-size: 2rem; font-variant-numeric: tabular-nums; }
+.stat-totals span { color: var(--muted); font-size: 0.9rem; text-align: center; }
+.stat-footnote { margin: 18px 0 0; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.statistics-chart-heading { font-size: 1.2rem; margin-bottom: 18px; }
+@media (max-width: 1100px) { .statistics-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .statistics-card, .statistics-summary { padding: 18px; }
+  .stat-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-row { grid-template-columns: 92px minmax(0, 1fr) 24px; gap: 8px; }
+}
