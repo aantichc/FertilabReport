@@ -82,7 +82,7 @@ export function renderReportCharts(reports) {
       <figure class="radial-chart">
         <svg viewBox="0 0 360 360" role="img" aria-labelledby="report-chart-title report-chart-description">
           <title id="report-chart-title">Distribución de ${total} partes por estado y clase</title>
-          <desc id="report-chart-description">El anillo interior representa los estados. El exterior divide cada estado por clase. Las cantidades se detallan en las leyendas y la tabla.</desc>
+          <desc id="report-chart-description">El anillo interior representa los estados. El exterior divide cada estado por clase. Las cantidades se detallan en las leyendas.</desc>
           ${rings}<text x="180" y="179" text-anchor="middle" class="chart-total">${total}</text>
           <text x="180" y="204" text-anchor="middle" class="chart-total-label">partes en total</text>
         </svg>
@@ -91,7 +91,5 @@ export function renderReportCharts(reports) {
       <div class="chart-legends"><section><h2>Estado <span>Anillo interior</span></h2><ul>${legend(statuses, StatusMeta, statusColors, statusTotal)}</ul></section>
       <section><h2>Clase <span>Anillo exterior</span></h2><ul>${legend(categories, CategoryMeta, categoryColors, classTotal)}</ul></section></div>
     </section>
-    <div class="chart-table-wrap"><table class="chart-table"><caption>Partes por estado y clase</caption><thead><tr><th scope="col">Estado</th>${categories.map(c => `<th scope="col">${CategoryMeta[c].label}</th>`).join("")}<th scope="col">Total</th></tr></thead>
-      <tbody>${statuses.map(status => `<tr><th scope="row">${StatusMeta[status].label}</th>${categories.map(category => `<td>${counts[status][category]}</td>`).join("")}<td><strong>${statusTotal(status)}</strong></td></tr>`).join("")}</tbody>
-      <tfoot><tr><th scope="row">Total</th>${categories.map(category => `<td>${classTotal(category)}</td>`).join("")}<td><strong>${total}</strong></td></tr></tfoot></table></div>`}`;
+`}`;
 }
