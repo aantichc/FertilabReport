@@ -29,7 +29,7 @@ export function buildMigration(snapshot) {
   for (const table of ["email_log","preventive_notification_log"]) {
     statements.push(`ALTER TABLE public.${table} ADD CONSTRAINT ${table}_emails_encrypted CHECK (array_position(recipients,NULL) IS NULL AND (cardinality(recipients)=0 OR array_to_string(recipients,',') ~ '^enc:v1:[A-Za-z0-9_-]+(,enc:v1:[A-Za-z0-9_-]+)*$'));`);
   }
-  statements.push("REVOKE ALL ON public.notification_recipients,public.email_log,public.preventive_notification_log FROM anon,authenticated;", "COMMIT;");
+  statements.push("REVOKE ALL ON public.notification_recipients,public.email_log,public.preventive_notification_log FROM anon,authenticated;", "GRANT SELECT,INSERT,UPDATE,DELETE ON public.notification_recipients TO service_role;", "GRANT SELECT,INSERT ON public.email_log,public.preventive_notification_log TO service_role;", "COMMIT;");
   return statements.join("\n");
 }
 

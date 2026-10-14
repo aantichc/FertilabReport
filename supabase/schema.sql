@@ -190,3 +190,6 @@ create policy "Fertilab insert preventive_notification_log" on public.preventive
 -- Notification addresses are encrypted/decrypted by the authenticated server API.
 -- The browser must not write plaintext or access these tables directly.
 revoke all on public.notification_recipients, public.email_log, public.preventive_notification_log from anon, authenticated;
+
+grant select, insert, update, delete on public.notification_recipients to service_role;
+grant select, insert on public.email_log, public.preventive_notification_log to service_role;
