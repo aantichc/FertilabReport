@@ -1181,7 +1181,7 @@ function renderCreate() {
       </label>
       <label>Estado inicial
         <select name="status" required>
-          ${statuses.map((status) => `<option value="${status}">${StatusMeta[status].label}</option>`).join("")}
+          ${statuses.map((status) => `<option value="${status}" ${status === "RED" ? "selected" : ""}>${StatusMeta[status].label}</option>`).join("")}
         </select>
       </label>
       <label>Clase
