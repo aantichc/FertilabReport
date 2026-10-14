@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { listRecipients } from "../lib/notificationData.js";
+import { encodeEmails } from "../lib/emailEncryption.js";
 import nodemailer from "nodemailer";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://bvqtznwagqrlwydslaxv.supabase.co";
@@ -119,16 +122,17 @@ async function hasNotification(taskId, occurrenceDate) {
 }
 
 async function recordNotification(taskId, occurrenceDate, recipients) {
+  const id = randomUUID();
   await supabaseRequest("preventive_notification_log", {
     method: "POST",
     headers: {
       Prefer: "return=minimal",
     },
     body: JSON.stringify({
-      id: crypto.randomUUID(),
+      id,
       task_id: taskId,
       occurrence_date: occurrenceDate,
-      recipients,
+      recipients: encodeEmails(recipients, "preventive_notification_log", id),
       created_at: new Date().toISOString(),
     }),
   });
@@ -157,7 +161,7 @@ export default async function handler(request, response) {
   }
 
   try {
-    const recipients = await supabaseRequest("notification_recipients?select=email&order=email.asc");
+    const recipients = await listRecipients();
     const recipientEmails = recipients.map((recipient) => recipient.email).filter(Boolean);
     if (!recipientEmails.length) {
       response.status(200).json({ ok: true, sent: 0, reason: "No recipients configured" });
@@ -192,6 +196,6 @@ export default async function handler(request, response) {
 
     response.status(200).json({ ok: true, sent });
   } catch (error) {
-    response.status(500).json({ error: error.message || "Unexpected preventive reminder error" });
+    response.status(500).json({ error: "No se han podido enviar los recordatorios." });
   }
 }

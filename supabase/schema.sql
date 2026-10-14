@@ -31,7 +31,8 @@ create table if not exists public.report_history (
 
 create table if not exists public.notification_recipients (
   id uuid primary key default gen_random_uuid(),
-  email text not null unique,
+  email text not null unique check (email ~ '^enc:v1:[A-Za-z0-9_-]+$'),
+  email_fingerprint text not null unique,
   created_at timestamptz not null default now()
 );
 
@@ -184,3 +185,8 @@ drop policy if exists "Fertilab select preventive_notification_log" on public.pr
 create policy "Fertilab select preventive_notification_log" on public.preventive_notification_log for select to authenticated using (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
 drop policy if exists "Fertilab insert preventive_notification_log" on public.preventive_notification_log;
 create policy "Fertilab insert preventive_notification_log" on public.preventive_notification_log for insert to authenticated with check (coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false and auth.jwt() -> 'app_metadata' ->> 'provider' = 'azure' and lower(auth.jwt() ->> 'email') like '%@fertilab.org');
+
+
+-- Notification addresses are encrypted/decrypted by the authenticated server API.
+-- The browser must not write plaintext or access these tables directly.
+revoke all on public.notification_recipients, public.email_log, public.preventive_notification_log from anon, authenticated;

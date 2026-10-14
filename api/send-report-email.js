@@ -1,3 +1,4 @@
+import { listRecipients } from "../lib/notificationData.js";
 import nodemailer from "nodemailer";
 import { requireFertilabSession } from "../lib/serverAuth.js";
 
@@ -59,10 +60,8 @@ export default async function handler(request, response) {
       response.status(401).json({ error: "Inicia sesión con una cuenta Microsoft de Fertilab." });
       return;
     }
-    const { report, recipients } = request.body ?? {};
-    const recipientEmails = Array.isArray(recipients)
-      ? recipients.map((email) => String(email).trim()).filter(Boolean)
-      : [];
+    const { report } = request.body ?? {};
+    const recipientEmails = (await listRecipients()).map(recipient => recipient.email);
 
     if (!report || !recipientEmails.length) {
       response.status(400).json({ error: "Missing report or recipients" });
@@ -87,6 +86,6 @@ export default async function handler(request, response) {
 
     response.status(200).json({ ok: true, id: result.messageId });
   } catch (error) {
-    response.status(500).json({ error: error.message || "Unexpected email error" });
+    response.status(500).json({ error: "No se ha podido enviar la notificación." });
   }
 }

@@ -38,6 +38,20 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+async function notificationRequest(resource, options = {}) {
+  const { data: { session }, error } = await authClient.auth.getSession();
+  if (error) throw error;
+  if (!session) throw new Error("Debes iniciar sesión con Microsoft.");
+  const response = await fetch(`/api/notification-data?resource=${resource}`, {
+    ...options,
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "No se han podido procesar las notificaciones.");
+  return result;
+}
+
 function encode(value) {
   return encodeURIComponent(value);
 }
@@ -82,41 +96,22 @@ export const supabaseClient = {
   },
 
   async listRecipients() {
-    return request("notification_recipients?select=*&order=email.asc");
+    return notificationRequest("recipients");
   },
-
   async createRecipient(email) {
-    const rows = await request("notification_recipients", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
-    return rows[0];
+    return notificationRequest("recipients", { method: "POST", body: JSON.stringify({ email }) });
   },
-
   async updateRecipient(id, email) {
-    const rows = await request(`notification_recipients?id=eq.${encode(id)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ email }),
-    });
-    return rows[0];
+    return notificationRequest("recipients", { method: "PATCH", body: JSON.stringify({ id, email }) });
   },
-
   async deleteRecipient(id) {
-    return request(`notification_recipients?id=eq.${encode(id)}`, {
-      method: "DELETE",
-    });
+    return notificationRequest("recipients", { method: "DELETE", body: JSON.stringify({ id }) });
   },
-
   async appendEmailLog(entry) {
-    const rows = await request("email_log", {
-      method: "POST",
-      body: JSON.stringify(entry),
-    });
-    return rows[0];
+    return notificationRequest("logs", { method: "POST", body: JSON.stringify(entry) });
   },
-
   async listEmailLog() {
-    return request("email_log?select=*&order=created_at.desc&limit=5");
+    return notificationRequest("logs");
   },
 
   async listCalendarNotes() {

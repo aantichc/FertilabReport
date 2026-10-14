@@ -1,4 +1,3 @@
-import { storage } from "./storage.js";
 import { supabaseClient, authClient } from "./supabaseClient.js";
 import { CategoryMeta, ReportCategory, StatusMeta } from "./models.js";
 
@@ -24,7 +23,6 @@ export async function notifyReportCreated(report, recipients) {
     },
   };
 
-  storage.appendEmailLog(notification);
   await supabaseClient.appendEmailLog({
     id: notification.id,
     report_id: report.id,
@@ -44,7 +42,6 @@ export async function notifyReportCreated(report, recipients) {
         Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({
-        recipients: notification.recipients,
         report: notification.payload,
       }),
     });
