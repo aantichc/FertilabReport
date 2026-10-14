@@ -7,7 +7,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL |
 const SUPABASE_SERVER_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const CATEGORY_LABELS = {
-  IT: "IT",
+  IT: "Informática",
   INSTALLATIONS: "Instalaciones",
   PURCHASES: "Compras",
 };
@@ -98,7 +98,7 @@ function buildEmailHtml(task, occurrenceDate) {
     <div style="font-family: Arial, sans-serif; color: #1f2933; line-height: 1.5;">
       <h1 style="margin: 0 0 16px;">Recordatorio de preventivo</h1>
       <p><strong>Preventivo:</strong> ${escapeHtml(task.title)}</p>
-      <p><strong>Clase:</strong> ${escapeHtml(CATEGORY_LABELS[task.category] || task.category || "IT")}</p>
+      <p><strong>Clase:</strong> ${escapeHtml(CATEGORY_LABELS[task.category] || task.category || "Informática")}</p>
       <p><strong>Fecha prevista:</strong> ${escapeHtml(occurrenceDate)}</p>
       ${
         task.content

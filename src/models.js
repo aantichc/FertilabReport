@@ -18,7 +18,7 @@ export const ReportCategory = Object.freeze({
 
 export const CategoryMeta = Object.freeze({
   [ReportCategory.IT]: {
-    label: "IT",
+    label: "Informática",
     tone: "blue",
   },
   [ReportCategory.INSTALLATIONS]: {
