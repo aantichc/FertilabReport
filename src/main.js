@@ -219,7 +219,7 @@ function renderShell(content) {
           ${categories.map(category => {
             const pending = state.reports.filter(report => (report.category ?? ReportCategory.IT) === category && report.currentStatus === "RED").length;
             const active = state.section === "reports" && state.reportCategory === category;
-            return `<button class="report-nav ${active ? "active" : ""}" data-report-category="${category}" ${active ? 'aria-current="page"' : ''}><span>${CategoryMeta[category].label}</span><span class="pending-count" aria-label="${pending} partes pendientes">${pending}</span></button>`;
+            return `<button class="report-nav ${active ? "active" : ""}" data-report-category="${category}" ${active ? 'aria-current="page"' : ''}><span>${CategoryMeta[category].label}</span>${pending > 0 ? `<span class="pending-count" aria-label="${pending} partes pendientes">${pending}</span>` : ""}</button>`;
           }).join("")}
           <button class="${state.section === "create" ? "active" : ""}" data-section="create">Generar parte</button>
           <button class="${state.section === "calendar" ? "active" : ""}" data-section="calendar">Calendario</button>
