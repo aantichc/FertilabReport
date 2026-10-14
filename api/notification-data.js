@@ -44,6 +44,16 @@ export default async function handler(request, response) {
     return response.status(200).json({ ok: true });
   } catch (error) {
     if (error.code === "23505") return response.status(409).json({ error: "Ese correo ya está configurado." });
-    return response.status(503).json({ error: "No se han podido procesar los correos de notificación." });
+    const code = error.message === "Email encryption key is not configured" || error.message === "Invalid email encryption key"
+      ? "EMAIL_KEY_UNAVAILABLE"
+      : error.message === "Notification storage is not configured" ? "NOTIFICATION_STORAGE_UNAVAILABLE"
+      : error.message === "SUPABASE_ANON_KEY is not configured" ? "AUTH_CONFIGURATION_UNAVAILABLE"
+      : error.code === "42501" ? "NOTIFICATION_STORAGE_PERMISSION"
+      : error.code === "PGRST003" ? "NOTIFICATION_STORAGE_TIMEOUT"
+      : error.message === "Invalid encrypted email" || error.message?.includes("authenticate data") ? "EMAIL_DECRYPTION_FAILED"
+      : "NOTIFICATION_SERVICE_UNAVAILABLE";
+    // Stable diagnostic codes only: never log addresses, request bodies, keys or session tokens.
+    console.error("Notification API failure", { resource, code });
+    return response.status(503).json({ error: "No se han podido procesar los correos de notificación.", code });
   }
 }

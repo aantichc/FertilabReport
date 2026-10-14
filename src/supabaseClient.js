@@ -48,7 +48,7 @@ async function notificationRequest(resource, options = {}) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "No se han podido procesar las notificaciones.");
+  if (!response.ok) throw new Error(`${result.error || "No se han podido procesar las notificaciones."}${result.code ? ` (${result.code})` : ""}`);
   return result;
 }
 
