@@ -1325,3 +1325,24 @@ dd {
   .charts-panel { grid-template-columns: 1fr; padding: 18px; gap: 24px; }
   .chart-table th, .chart-table td { padding: 12px; }
 }
+.nav .report-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pending-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #c43131;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

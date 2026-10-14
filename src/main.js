@@ -11,6 +11,7 @@ const state = {
   section: "reports",
   filter: "ALL",
   categoryFilter: "ALL",
+  reportCategory: ReportCategory.IT,
   sortBy: "updatedAt",
   listLimit: window.matchMedia("(max-width: 640px)").matches ? "3" : "ALL",
   selectedReportId: null,
@@ -138,7 +139,7 @@ function getSortedReports() {
   const reports = state.reports;
   const filtered = reports.filter((report) => {
     const matchesStatus = state.filter === "ALL" || report.currentStatus === state.filter;
-    return matchesStatus && matchesCategoryFilter(report);
+    return matchesStatus && (report.category ?? ReportCategory.IT) === state.reportCategory;
   });
 
   const sorted = filtered.sort((a, b) => {
@@ -151,7 +152,8 @@ function getSortedReports() {
 }
 
 function getSelectedReport() {
-  return state.reports.find((report) => report.id === state.selectedReportId) ?? state.reports[0] ?? null;
+  const reports = getSortedReports();
+  return reports.find((report) => report.id === state.selectedReportId) ?? reports[0] ?? null;
 }
 
 function hasActiveUser() {
@@ -214,7 +216,11 @@ function renderShell(content) {
           </div>
         </div>
         <nav class="nav">
-          <button class="${state.section === "reports" ? "active" : ""}" data-section="reports">Ver partes</button>
+          ${categories.map(category => {
+            const pending = state.reports.filter(report => (report.category ?? ReportCategory.IT) === category && report.currentStatus === "RED").length;
+            const active = state.section === "reports" && state.reportCategory === category;
+            return `<button class="report-nav ${active ? "active" : ""}" data-report-category="${category}" ${active ? 'aria-current="page"' : ''}><span>${CategoryMeta[category].label}</span><span class="pending-count" aria-label="${pending} partes pendientes">${pending}</span></button>`;
+          }).join("")}
           <button class="${state.section === "create" ? "active" : ""}" data-section="create">Generar parte</button>
           <button class="${state.section === "calendar" ? "active" : ""}" data-section="calendar">Calendario</button>
           <button class="${state.section === "charts" ? "active" : ""}" data-section="charts">Gráficas</button>
@@ -239,6 +245,15 @@ function renderShell(content) {
     </div>
   `;
 
+  document.querySelectorAll("[data-report-category]").forEach(button => {
+    button.addEventListener("click", () => {
+      state.section = "reports";
+      state.reportCategory = button.dataset.reportCategory;
+      state.selectedReportId = null;
+      state.filter = "ALL";
+      render();
+    });
+  });
   document.querySelectorAll("[data-section]").forEach((button) => {
     button.addEventListener("click", () => {
       state.section = button.dataset.section;
@@ -313,7 +328,7 @@ function renderReports() {
     <header class="page-header">
       <div>
         <p class="eyebrow">Partes</p>
-        <h1>Seguimiento operativo</h1>
+        <h1>Partes de ${CategoryMeta[state.reportCategory].label}</h1>
       </div>
       <button class="primary" data-section="create">Nuevo parte</button>
     </header>
@@ -322,11 +337,6 @@ function renderReports() {
         <select id="filter-status">
           <option value="ALL">Todos</option>
           ${statuses.map((status) => `<option value="${status}" ${state.filter === status ? "selected" : ""}>${StatusMeta[status].label}</option>`).join("")}
-        </select>
-      </label>
-      <label>Clase
-        <select id="filter-category">
-          ${categoryOptions(state.categoryFilter)}
         </select>
       </label>
       <label>Ordenar por
@@ -350,10 +360,6 @@ function renderReports() {
 
   document.querySelector("#filter-status").addEventListener("change", (event) => {
     state.filter = event.target.value;
-    render();
-  });
-  document.querySelector("#filter-category").addEventListener("change", (event) => {
-    state.categoryFilter = event.target.value;
     render();
   });
   document.querySelector("#sort-by").addEventListener("change", (event) => {
@@ -588,6 +594,9 @@ function renderCalendar() {
   document.querySelectorAll("[data-calendar-report]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedReportId = button.dataset.calendarReport;
+      state.reportCategory = state.reports.find(report => report.id === state.selectedReportId)?.category ?? ReportCategory.IT;
+      state.filter = "ALL";
+      state.listLimit = "ALL";
       state.section = "reports";
       render();
     });
@@ -1205,6 +1214,8 @@ function renderCreate() {
         user: state.activeUser,
       });
       state.selectedReportId = report.id;
+      state.reportCategory = report.category ?? ReportCategory.IT;
+      state.filter = "ALL";
       state.section = "reports";
     });
   });
@@ -1439,6 +1450,7 @@ function applySession(session) {
     state.selectedReportId = null;
     state.confirmDialog = null;
     state.section = "reports";
+    state.reportCategory = ReportCategory.IT;
   }
   render();
   if (state.session && previousUserId !== state.session.user.id) {

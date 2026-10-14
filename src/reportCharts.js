@@ -40,7 +40,7 @@ export function renderReportCharts(reports) {
   }).join("");
   const legend = (keys, meta, colors, getCount) => keys.map(key => `<li><span class="chart-swatch" style="background:${colors[key]}" aria-hidden="true"></span><span>${meta[key].label}</span><strong>${getCount(key)}</strong><small>${total ? Math.round(getCount(key) / total * 100) : 0} %</small></li>`).join("");
   return `<div class="page-header"><div><p class="eyebrow">Gráficas</p><h1>Distribución de partes</h1></div></div>
-    <p class="muted">Todos los partes, según su estado actual y clase. Los filtros de «Ver partes» no se aplican aquí.</p>
+    <p class="muted">Todos los partes, según su estado actual y clase. Los filtros de las pestañas de partes no se aplican aquí.</p>
     ${!total ? `<div class="empty">Todavía no hay partes para mostrar en el gráfico.</div>` : `
     <section class="charts-panel">
       <figure class="radial-chart">
